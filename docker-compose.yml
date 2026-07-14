@@ -1,10 +1,14 @@
 # ── AXON-RYZR — full stack orchestration ──
+# Isolated project namespace so it never collides with other apps (e.g. ComputeHub).
+# Every container/volume/network is prefixed 'axon-ryzr' and uses a distinct port range.
 # Usage: cp .env.example .env && docker compose up -d --build
+
+name: axon-ryzr
 
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: axon-postgres
+    container_name: axon-ryzr-postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-axon}
@@ -21,7 +25,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: axon-redis
+    container_name: axon-ryzr-redis
     restart: unless-stopped
     command: >
       redis-server --appendonly yes
@@ -37,15 +41,15 @@ services:
 
   minio:
     image: minio/minio:latest
-    container_name: axon-minio
+    container_name: axon-ryzr-minio
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
     ports:
-      - '${MINIO_PORT:-9000}:9000'
-      - '${MINIO_CONSOLE_PORT:-9001}:9001'
+      - '${MINIO_PORT:-9200}:9000'
+      - '${MINIO_CONSOLE_PORT:-9201}:9001'
     volumes:
       - minio_data:/data
     healthcheck:
@@ -74,7 +78,7 @@ services:
     build:
       context: ./apps/api
       dockerfile: Dockerfile
-    container_name: axon-api
+    container_name: axon-ryzr-api
     restart: unless-stopped
     depends_on:
       postgres:
@@ -87,8 +91,8 @@ services:
       NODE_ENV: ${NODE_ENV:-production}
       API_PORT: 4000
       API_GLOBAL_PREFIX: api
-      WEB_URL: ${WEB_URL:-http://localhost:3000}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      WEB_URL: ${WEB_URL:-http://localhost:3200}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3200}
       DATABASE_URL: postgresql://${POSTGRES_USER:-axon}:${POSTGRES_PASSWORD:-secret}@postgres:5432/${POSTGRES_DB:-axon_db}?schema=public
       REDIS_HOST: redis
       REDIS_PORT: 6379
@@ -99,14 +103,14 @@ services:
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
       MINIO_BUCKET: ${MINIO_BUCKET:-axon-assets}
-      MINIO_PUBLIC_URL: ${MINIO_PUBLIC_URL:-http://localhost:9000}
+      MINIO_PUBLIC_URL: ${MINIO_PUBLIC_URL:-http://localhost:9200}
       COMFYUI_BASE_URL: ${COMFYUI_BASE_URL:-http://127.0.0.1:8188}
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?set a strong secret in .env}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?set a strong secret in .env}
       JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-15m}
       JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-7d}
     ports:
-      - '${API_PORT:-4000}:4000'
+      - '${API_PORT:-4200}:4000'
     networks: [axon-net]
 
   web:
@@ -114,23 +118,23 @@ services:
       context: .
       dockerfile: apps/web/Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000/api}
-        NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL:-http://localhost:4000}
-    container_name: axon-web
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4200/api}
+        NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL:-http://localhost:4200}
+    container_name: axon-ryzr-web
     restart: unless-stopped
     depends_on:
       - api
     environment:
       NODE_ENV: ${NODE_ENV:-production}
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000/api}
-      NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL:-http://localhost:4000}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4200/api}
+      NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL:-http://localhost:4200}
     ports:
-      - '${WEB_PORT:-3000}:3000'
+      - '${WEB_PORT:-3200}:3000'
     networks: [axon-net]
 
   nginx:
     image: nginx:1.27-alpine
-    container_name: axon-nginx
+    container_name: axon-ryzr-nginx
     restart: unless-stopped
     depends_on:
       - api
@@ -138,14 +142,18 @@ services:
     volumes:
       - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     ports:
-      - '${HTTP_PORT:-80}:80'
+      - '${HTTP_PORT:-8200}:80'
     networks: [axon-net]
 
 volumes:
   postgres_data:
+    name: axon_ryzr_postgres_data
   redis_data:
+    name: axon_ryzr_redis_data
   minio_data:
+    name: axon_ryzr_minio_data
 
 networks:
   axon-net:
+    name: axon-ryzr-net
     driver: bridge
