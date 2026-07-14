@@ -300,4 +300,8 @@ Proyek ini dilisensikan di bawah **MIT License**. Lihat berkas `LICENSE` untuk d
 
 **AXON-RYZR** · Dibangun untuk berjalan optimal di server kampus 🏫⚡
 
+## Contributors
+
+- Nur Adnan Yusri
+
 </div>
