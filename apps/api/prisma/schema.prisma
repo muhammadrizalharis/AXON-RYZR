@@ -1,0 +1,189 @@
+// AXON-RYZR — Prisma schema
+// Database: PostgreSQL 16
+// Docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// Enums
+// ─────────────────────────────────────────────
+
+enum Role {
+  USER
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum JobType {
+  IMAGE
+  VIDEO
+}
+
+enum JobStatus {
+  QUEUED
+  RENDERING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum AssetType {
+  IMAGE
+  VIDEO
+}
+
+enum CreditTxnType {
+  GRANT // credits added (admin/top-up)
+  DEBIT // credits spent on a job
+  REFUND // credits returned on failure
+}
+
+// ─────────────────────────────────────────────
+// Models
+// ─────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         Role     @default(USER)
+
+  // Fair-use quota / isolation per-user
+  credits     Int    @default(100) // generation credits
+  storageUsed BigInt @default(0) // bytes used in MinIO namespace
+
+  isActive Boolean @default(true)
+
+  refreshTokens RefreshToken[]
+  projects      Project[]
+  jobs          Job[]
+  assets        Asset[]
+  creditTxns    CreditTransaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@map("users")
+}
+
+// Hashed refresh tokens for rotation & revocation
+model RefreshToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String // Argon2 hash of the refresh token
+  expiresAt DateTime
+  revokedAt DateTime?
+  userAgent String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model Project {
+  id          String  @id @default(uuid()) @db.Uuid
+  userId      String  @db.Uuid
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+
+  jobs   Job[]
+  assets Asset[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("projects")
+}
+
+model Job {
+  id        String @id @default(uuid()) @db.Uuid
+  userId    String @db.Uuid
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId String? @db.Uuid
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  type   JobType
+  status JobStatus @default(QUEUED)
+
+  prompt         String
+  negativePrompt String?
+
+  // Free-form generation parameters (aspect ratio, style, resolution, duration, fps, seed, steps, cfg...)
+  params Json @default("{}")
+
+  creditsCost Int @default(1)
+
+  // BullMQ + ComfyUI tracking
+  queueJobId    String? // BullMQ job id
+  comfyPromptId String? // ComfyUI prompt id
+  progress      Int      @default(0) // 0-100
+  error         String?
+
+  startedAt  DateTime?
+  finishedAt DateTime?
+
+  assets Asset[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([projectId])
+  @@map("jobs")
+}
+
+model Asset {
+  id        String  @id @default(uuid()) @db.Uuid
+  userId    String  @db.Uuid
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobId     String? @db.Uuid
+  job       Job?    @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  projectId String? @db.Uuid
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  type       AssetType
+  storageKey String // MinIO object key (namespaced per-user)
+  bucket     String
+  mimeType   String
+  fileSize   BigInt    @default(0)
+
+  width    Int?
+  height   Int?
+  duration Float? // seconds (video)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([jobId])
+  @@map("assets")
+}
+
+model CreditTransaction {
+  id       String        @id @default(uuid()) @db.Uuid
+  userId   String        @db.Uuid
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type     CreditTxnType
+  amount   Int // positive for grant/refund, negative for debit
+  balance  Int // resulting balance after txn
+  reason   String?
+  jobId    String? @db.Uuid
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("credit_transactions")
+}
