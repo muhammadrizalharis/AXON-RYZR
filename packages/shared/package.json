@@ -1,0 +1,16 @@
+{
+  "name": "@axon-ryzr/shared",
+  "version": "0.1.0",
+  "description": "Shared TypeScript types & DTO contracts for AXON-RYZR",
+  "private": true,
+  "license": "MIT",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}
