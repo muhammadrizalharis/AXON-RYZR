@@ -101,6 +101,11 @@ export class StorageService implements OnModuleInit {
       const base = this.config.publicUrl.replace(/\/$/, '');
       return `${base}/${this.config.bucket}/${storageKey}`;
     }
+    // Serve through the API asset proxy (works behind a tunnel / single public port).
+    if (this.config.assetPublicBase) {
+      const base = this.config.assetPublicBase.replace(/\/$/, '');
+      return `${base}/assets/${storageKey}`;
+    }
     try {
       return await this.client.presignedGetObject(
         this.config.bucket,
@@ -140,5 +145,19 @@ export class StorageService implements OnModuleInit {
     } catch {
       return false;
     }
+  }
+
+  /**
+   * Fetches an object's metadata (size, content-type) from the store.
+   */
+  async statObject(storageKey: string) {
+    return this.client.statObject(this.config.bucket, storageKey);
+  }
+
+  /**
+   * Streams an object from the store (used by the public asset proxy).
+   */
+  async getObjectStream(storageKey: string): Promise<NodeJS.ReadableStream> {
+    return this.client.getObject(this.config.bucket, storageKey);
   }
 }

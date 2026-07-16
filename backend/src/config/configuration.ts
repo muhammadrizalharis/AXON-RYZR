@@ -27,6 +27,7 @@ export interface MinioConfig {
   secretKey: string;
   bucket: string;
   publicUrl?: string;
+  assetPublicBase?: string;
 }
 
 export interface ComfyuiConfig {
@@ -100,6 +101,7 @@ export default (): Configuration => ({
     secretKey: process.env.MINIO_SECRET_KEY ?? 'minioadmin',
     bucket: process.env.MINIO_BUCKET ?? 'axon-assets',
     publicUrl: process.env.MINIO_PUBLIC_URL || undefined,
+    assetPublicBase: process.env.ASSET_PUBLIC_BASE || undefined,
   },
   comfyui: {
     baseUrl: process.env.COMFYUI_BASE_URL ?? 'http://127.0.0.1:8188',

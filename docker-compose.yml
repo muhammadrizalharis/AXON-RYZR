@@ -103,6 +103,7 @@ services:
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
       MINIO_BUCKET: ${MINIO_BUCKET:-axon-assets}
       MINIO_PUBLIC_URL: ${MINIO_PUBLIC_URL:-}
+      ASSET_PUBLIC_BASE: ${ASSET_PUBLIC_BASE:-}
       COMFYUI_BASE_URL: ${COMFYUI_BASE_URL:-http://127.0.0.1:8188}
       COMFYUI_FLUX_UNET: ${COMFYUI_FLUX_UNET:-flux2_dev_fp8mixed.safetensors}
       COMFYUI_FLUX_CLIP: ${COMFYUI_FLUX_CLIP:-mistral_3_small_flux2_fp8.safetensors}
