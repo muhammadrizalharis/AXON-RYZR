@@ -33,7 +33,7 @@ services:
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ['CMD', 'redis-cli', 'ping']
+      test: ['CMD-SHELL', 'redis-cli ${REDIS_PASSWORD:+-a ${REDIS_PASSWORD} --no-auth-warning} ping | grep -q PONG']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -69,14 +69,13 @@ services:
       /bin/sh -c "
       mc alias set local http://minio:9000 ${MINIO_ACCESS_KEY:-minioadmin} ${MINIO_SECRET_KEY:-minioadmin};
       mc mb --ignore-existing local/${MINIO_BUCKET:-axon-assets};
-      mc anonymous set download local/${MINIO_BUCKET:-axon-assets};
       exit 0;
       "
     networks: [axon-net]
 
   api:
     build:
-      context: ./apps/api
+      context: ./backend
       dockerfile: Dockerfile
     container_name: axon-ryzr-api
     restart: unless-stopped
@@ -103,12 +102,15 @@ services:
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
       MINIO_BUCKET: ${MINIO_BUCKET:-axon-assets}
-      MINIO_PUBLIC_URL: ${MINIO_PUBLIC_URL:-http://localhost:9200}
+      MINIO_PUBLIC_URL: ${MINIO_PUBLIC_URL:-}
       COMFYUI_BASE_URL: ${COMFYUI_BASE_URL:-http://127.0.0.1:8188}
+      COMFYUI_DEFAULT_CHECKPOINT: ${COMFYUI_DEFAULT_CHECKPOINT:-sd_xl_base_1.0.safetensors}
+      COMFYUI_MOTION_MODULE: ${COMFYUI_MOTION_MODULE:-mm_sd_v15_v2.ckpt}
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?set a strong secret in .env}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?set a strong secret in .env}
       JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-15m}
       JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-7d}
+      JOB_CONCURRENCY: ${JOB_CONCURRENCY:-2}
     ports:
       - '${API_PORT:-4200}:4000'
     networks: [axon-net]

@@ -4,6 +4,7 @@ import { JobStatus, Prisma } from '@prisma/client';
 import { Queue } from 'bullmq';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
+import { UsersService } from '../users/users.service';
 import { serializeBigInt } from '../common/utils/serialize';
 import {
   GENERATION_JOB_NAME,
@@ -18,6 +19,7 @@ export class JobsService {
     private readonly queue: Queue<GenerationJobData>,
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
+    private readonly users: UsersService,
   ) {}
 
   /**
@@ -87,10 +89,13 @@ export class JobsService {
     if (job.status === JobStatus.QUEUED) {
       const queued = await this.queue.getJob(jobId);
       await queued?.remove();
-      return this.prisma.job.update({
+      const cancelled = await this.prisma.job.update({
         where: { id: jobId },
         data: { status: JobStatus.CANCELLED },
       });
+      // Return the credits reserved for a job that never ran.
+      await this.users.refundCredits(userId, job.creditsCost, jobId);
+      return cancelled;
     }
     return job;
   }

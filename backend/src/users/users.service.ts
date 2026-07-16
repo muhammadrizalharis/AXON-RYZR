@@ -142,9 +142,26 @@ export class UsersService {
   }
 
   async addStorageUsage(userId: string, bytes: number) {
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { storageUsed: { increment: BigInt(Math.max(0, bytes)) } },
+    if (bytes === 0) return;
+    if (bytes > 0) {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { storageUsed: { increment: BigInt(bytes) } },
+      });
+      return;
+    }
+    // Reclaiming storage on delete — decrement but never below zero.
+    await this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({
+        where: { id: userId },
+        select: { storageUsed: true },
+      });
+      if (!user) return;
+      const next = user.storageUsed + BigInt(bytes);
+      await tx.user.update({
+        where: { id: userId },
+        data: { storageUsed: next > 0n ? next : 0n },
+      });
     });
   }
 

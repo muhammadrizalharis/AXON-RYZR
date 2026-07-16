@@ -15,7 +15,9 @@ import {
   GenerationParams,
 } from './jobs.constants';
 
-@Processor(GENERATION_QUEUE, { concurrency: 2 })
+@Processor(GENERATION_QUEUE, {
+  concurrency: Number(process.env.JOB_CONCURRENCY) || 2,
+})
 export class JobsProcessor extends WorkerHost {
   private readonly logger = new Logger(JobsProcessor.name);
 
@@ -206,8 +208,10 @@ export class JobsProcessor extends WorkerHost {
 
   private async handleFailure(bullJob: BullJob<GenerationJobData>, err: Error) {
     const { jobId, userId, type, creditsCost } = bullJob.data;
-    const isFinalAttempt =
-      bullJob.attemptsMade >= (bullJob.opts.attempts ?? 1);
+    const maxAttempts = bullJob.opts.attempts ?? 1;
+    // BullMQ increments attemptsMade only after this handler returns, so the
+    // current attempt is attemptsMade + 1. Detect the last attempt correctly.
+    const isFinalAttempt = bullJob.attemptsMade + 1 >= maxAttempts;
 
     this.logger.error(
       `Job ${jobId} failed (attempt ${bullJob.attemptsMade}): ${err.message}`,

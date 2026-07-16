@@ -39,8 +39,9 @@ export function buildTextToVideoWorkflow(
     fps,
     samplerName = 'euler',
     scheduler = 'normal',
-    checkpoint = 'sd_xl_base_1.0.safetensors',
-    motionModule = 'mm_sd_v15_v2.ckpt',
+    checkpoint = process.env.COMFYUI_DEFAULT_CHECKPOINT ||
+      'sd_xl_base_1.0.safetensors',
+    motionModule = process.env.COMFYUI_MOTION_MODULE || 'mm_sd_v15_v2.ckpt',
   } = params;
 
   return {

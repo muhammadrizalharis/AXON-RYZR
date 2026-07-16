@@ -129,4 +129,16 @@ export class StorageService implements OnModuleInit {
       await this.client.makeBucket(this.config.bucket);
     }
   }
+
+  /**
+   * Lightweight readiness probe for the object store.
+   */
+  async health(): Promise<boolean> {
+    try {
+      await this.client.bucketExists(this.config.bucket);
+      return true;
+    } catch {
+      return false;
+    }
+  }
 }

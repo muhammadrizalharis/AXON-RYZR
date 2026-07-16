@@ -115,30 +115,30 @@ flowchart TD
 
 ```
 AXON-RYZR/
+├── backend/                  # Backend — NestJS (SEMUA backend di sini)
+│   ├── src/
+│   │   ├── auth/             # JWT, guards, RBAC
+│   │   ├── users/            # Manajemen user & kuota
+│   │   ├── generation/       # Endpoint generate image/video
+│   │   ├── jobs/             # BullMQ producer/consumer
+│   │   ├── comfyui/          # Integrasi ComfyUI (HTTP/WS)
+│   │   ├── storage/          # MinIO service
+│   │   ├── realtime/         # Socket.IO gateway
+│   │   └── prisma/           # Schema & migrations
+│   └── package.json
+│
 ├── apps/
-│   ├── web/                  # Frontend — Next.js 14
-│   │   ├── src/
-│   │   │   ├── app/          # App Router (routes, layouts)
-│   │   │   ├── components/   # Komponen UI (shadcn/ui)
-│   │   │   ├── features/     # Fitur: creation-hub, gallery, auth
-│   │   │   ├── lib/          # API client, socket, utils
-│   │   │   └── store/        # Zustand stores
-│   │   └── package.json
-│   │
-│   └── api/                  # Backend — NestJS
+│   └── web/                  # Frontend — Next.js 14 (tim frontend)
 │       ├── src/
-│       │   ├── auth/         # JWT, guards, RBAC
-│       │   ├── users/        # Manajemen user & kuota
-│       │   ├── generation/   # Endpoint generate image/video
-│       │   ├── jobs/         # BullMQ producer/consumer
-│       │   ├── comfyui/      # Integrasi ComfyUI (HTTP/WS)
-│       │   ├── storage/      # MinIO service
-│       │   ├── realtime/     # Socket.IO gateway
-│       │   └── prisma/       # Schema & migrations
+│       │   ├── app/          # App Router (routes, layouts)
+│       │   ├── components/   # Komponen UI (shadcn/ui)
+│       │   ├── features/     # Fitur: creation-hub, gallery, auth
+│       │   ├── lib/          # API client, socket, utils
+│       │   └── store/        # Zustand stores
 │       └── package.json
 │
 ├── packages/
-│   └── shared/               # Tipe & DTO bersama (TypeScript)
+│   └── shared/               # Tipe & DTO bersama (dipakai frontend)
 │
 ├── docker/
 │   ├── nginx/                # Konfigurasi reverse proxy
@@ -195,7 +195,7 @@ docker compose exec api npx prisma migrate deploy
 cd apps/web && npm install && npm run dev
 
 # Backend
-cd apps/api && npm install && npm run start:dev
+cd backend && npm install && npm run start:dev
 ```
 
 ---

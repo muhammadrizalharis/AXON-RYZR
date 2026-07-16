@@ -36,7 +36,8 @@ export function buildTextToImageWorkflow(
     seed,
     samplerName = 'euler',
     scheduler = 'normal',
-    checkpoint = 'sd_xl_base_1.0.safetensors',
+    checkpoint = process.env.COMFYUI_DEFAULT_CHECKPOINT ||
+      'sd_xl_base_1.0.safetensors',
     batchSize = 1,
   } = params;
 

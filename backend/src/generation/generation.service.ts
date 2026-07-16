@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JobStatus, JobType, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -106,6 +106,17 @@ export class GenerationService {
     cost: number;
     projectId?: string;
   }) {
+    // Ensure the target project (if any) belongs to the requesting user.
+    if (input.projectId) {
+      const project = await this.prisma.project.findUnique({
+        where: { id: input.projectId },
+        select: { userId: true },
+      });
+      if (!project || project.userId !== input.userId) {
+        throw new NotFoundException('Project not found');
+      }
+    }
+
     // Debit credits atomically first — throws 400 if insufficient.
     await this.users.debitCredits(input.userId, input.cost);
 
