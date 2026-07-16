@@ -71,9 +71,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
     response.status(status).json(body);
   }
 
-  private mapPrismaError(
-    exception: Prisma.PrismaClientKnownRequestError,
-  ): { status: number; message: string } {
+  private mapPrismaError(exception: Prisma.PrismaClientKnownRequestError): {
+    status: number;
+    message: string;
+  } {
     switch (exception.code) {
       case 'P2002': {
         const target = (exception.meta?.target as string[] | undefined)?.join(

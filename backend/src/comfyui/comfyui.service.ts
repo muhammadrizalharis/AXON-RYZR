@@ -119,11 +119,7 @@ export class ComfyuiService {
         if (settled) return;
         settled = true;
         ws?.terminate();
-        reject(
-          new ServiceUnavailableException(
-            'ComfyUI generation timed out',
-          ),
-        );
+        reject(new ServiceUnavailableException('ComfyUI generation timed out'));
       }, this.config.timeoutMs);
 
       const finish = (err?: Error) => {
@@ -139,7 +135,9 @@ export class ComfyuiService {
       } catch (err) {
         clearTimeout(timeout);
         // Fall back to polling.
-        this.pollHistory(promptId).then(() => finish()).catch(finish);
+        this.pollHistory(promptId)
+          .then(() => finish())
+          .catch(finish);
         return;
       }
 
@@ -186,13 +184,17 @@ export class ComfyuiService {
       ws.on('error', (err) => {
         this.logger.warn(`ComfyUI WS error, falling back to polling: ${err}`);
         clearTimeout(timeout);
-        this.pollHistory(promptId).then(() => finish()).catch(finish);
+        this.pollHistory(promptId)
+          .then(() => finish())
+          .catch(finish);
       });
 
       ws.on('close', () => {
         // If closed before completion without error, verify via history.
         if (!settled) {
-          this.pollHistory(promptId).then(() => finish()).catch(finish);
+          this.pollHistory(promptId)
+            .then(() => finish())
+            .catch(finish);
         }
       });
     });

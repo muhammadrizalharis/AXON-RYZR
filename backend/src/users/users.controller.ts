@@ -13,10 +13,7 @@ import { Role } from '@prisma/client';
 import { UsersService } from './users.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { AdjustCreditsDto } from './dto/adjust-credits.dto';
-import {
-  CurrentUser,
-  AuthUser,
-} from '../common/decorators/current-user.decorator';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
 
@@ -32,10 +29,7 @@ export class UsersController {
   }
 
   @Patch('me')
-  updateMe(
-    @CurrentUser('id') userId: string,
-    @Body() dto: UpdateProfileDto,
-  ) {
+  updateMe(@CurrentUser('id') userId: string, @Body() dto: UpdateProfileDto) {
     return this.usersService.updateProfile(userId, dto.name);
   }
 
@@ -44,10 +38,7 @@ export class UsersController {
   @Get()
   @Roles(Role.ADMIN)
   @UseGuards(RolesGuard)
-  listUsers(
-    @Query('skip') skip = '0',
-    @Query('take') take = '20',
-  ) {
+  listUsers(@Query('skip') skip = '0', @Query('take') take = '20') {
     return this.usersService.listUsers(Number(skip), Number(take));
   }
 
@@ -78,10 +69,7 @@ export class UsersController {
   @Patch(':id/role/:role')
   @Roles(Role.SUPER_ADMIN)
   @UseGuards(RolesGuard)
-  setRole(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Param('role') role: Role,
-  ) {
+  setRole(@Param('id', ParseUUIDPipe) id: string, @Param('role') role: Role) {
     return this.usersService.setRole(id, role);
   }
 

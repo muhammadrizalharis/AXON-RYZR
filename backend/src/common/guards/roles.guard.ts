@@ -40,9 +40,7 @@ export class RolesGuard implements CanActivate {
     }
 
     const userRank = ROLE_RANK[authUser.role as Role] ?? -1;
-    const minRequiredRank = Math.min(
-      ...requiredRoles.map((r) => ROLE_RANK[r]),
-    );
+    const minRequiredRank = Math.min(...requiredRoles.map((r) => ROLE_RANK[r]));
 
     if (userRank < minRequiredRank) {
       throw new ForbiddenException('Insufficient permissions');

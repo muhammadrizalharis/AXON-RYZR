@@ -7,10 +7,7 @@ import { JobsProcessor } from './jobs.processor';
 import { GENERATION_QUEUE } from './jobs.constants';
 
 @Module({
-  imports: [
-    BullModule.registerQueue({ name: GENERATION_QUEUE }),
-    UsersModule,
-  ],
+  imports: [BullModule.registerQueue({ name: GENERATION_QUEUE }), UsersModule],
   controllers: [JobsController],
   providers: [JobsService, JobsProcessor],
   exports: [JobsService],

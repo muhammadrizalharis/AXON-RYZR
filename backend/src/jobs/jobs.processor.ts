@@ -70,8 +70,7 @@ export class JobsProcessor extends WorkerHost {
     if (type === JobType.VIDEO) {
       const fps = params.fps ?? 8;
       const frames =
-        params.frames ??
-        Math.max(1, Math.round((params.duration ?? 2) * fps));
+        params.frames ?? Math.max(1, Math.round((params.duration ?? 2) * fps));
       return buildTextToVideoWorkflow({
         prompt,
         negativePrompt,
@@ -110,7 +109,8 @@ export class JobsProcessor extends WorkerHost {
     type: JobType,
     outputs: ComfyOutputFile[],
   ) {
-    const assetType = type === JobType.VIDEO ? AssetType.VIDEO : AssetType.IMAGE;
+    const assetType =
+      type === JobType.VIDEO ? AssetType.VIDEO : AssetType.IMAGE;
     const created: Array<{ id: string; url: string; type: string }> = [];
 
     for (const file of outputs) {

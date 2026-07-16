@@ -59,7 +59,8 @@ export class AuthController {
   @Post('refresh')
   async refresh(
     @Body() _dto: RefreshDto,
-    @Req() req: Request & { user: JwtRefreshPayload & { refreshToken: string } },
+    @Req()
+    req: Request & { user: JwtRefreshPayload & { refreshToken: string } },
   ) {
     const { sub, jti, refreshToken } = req.user;
     return this.authService.refresh(sub, jti, refreshToken, this.meta(req));

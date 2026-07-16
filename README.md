@@ -155,8 +155,8 @@ AXON-RYZR/
 - **OS:** Linux (Ubuntu 22.04 LTS direkomendasikan)
 - **Docker** ≥ 24 & **Docker Compose** v2
 - **GPU Node** dengan **ComfyUI** aktif di `127.0.0.1:8188` (VRAM **≥ 16 GB**)
-- Akses **root** / sudo pada host
-- Node.js ≥ 20 (untuk pengembangan lokal)
+- Akses **Docker** untuk deploy penuh (dev bisa TANPA sudo — lihat Pengembangan lokal)
+- Node.js ≥ 20 (menjalankan API)
 
 ---
 
@@ -190,13 +190,40 @@ docker compose exec api npx prisma migrate deploy
 - **MinIO Console:** `http://<ip>:9001`
 
 ### Pengembangan lokal
-```bash
-# Frontend
-cd apps/web && npm install && npm run dev
 
-# Backend
-cd backend && npm install && npm run start:dev
+Backend butuh **PostgreSQL + Redis + MinIO**. Pilih SALAH SATU cara menyalakannya:
+
+#### Opsi 1 — Docker (infra saja, tanpa build image berat)
+Untuk yang punya akses Docker (bila belum di group `docker`, awali `sudo`):
+```bash
+docker compose -f docker-compose.dev.yml up -d      # Postgres + Redis + MinIO saja
+cd backend && npm install
+npx prisma migrate deploy && npm run db:seed        # skema + super-admin
+npm run start:dev                                   # API hot-reload di :4000
 ```
+
+#### Opsi 2 — TANPA sudo & TANPA Docker (server kampus)
+Kalau tidak punya akses Docker/sudo, jalankan dependency di user-space (butuh conda/miniforge):
+```bash
+backend/scripts/dev-services.sh up     # pasang & nyalakan Postgres+Redis+MinIO (user-space)
+# script mencetak blok .env siap pakai -> salin ke backend/.env
+cd backend && npm install
+npx prisma migrate deploy && npm run start:dev
+backend/scripts/dev-services.sh down   # matikan bila selesai
+```
+Semua data & binari ada di `~/.axon-ryzr-dev` (di luar repo; hapus dengan `rm -rf`).
+
+#### Frontend (tim frontend) — TIDAK perlu Docker
+Frontend cukup mengarah ke URL backend yang sudah berjalan (lokal atau milik rekan):
+```bash
+cd apps/web && npm install
+# set NEXT_PUBLIC_API_URL & NEXT_PUBLIC_SOCKET_URL di apps/web/.env ke backend
+npm run dev
+```
+
+> **Model kolaborasi:** cukup SATU orang menyalakan backend + dependency (Opsi 1 atau 2),
+> lalu yang mengerjakan frontend hanya `npm run dev` dan menunjuk `NEXT_PUBLIC_API_URL` ke
+> backend itu. Tim frontend **tidak perlu** Docker/sudo maupun Postgres/Redis/MinIO di mesinnya.
 
 ---
 
