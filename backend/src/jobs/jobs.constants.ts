@@ -31,6 +31,7 @@ export interface GenerationParams {
   checkpoint?: string;
   // image only
   batchSize?: number;
+  guidance?: number;
   // video only
   frames?: number;
   fps?: number;

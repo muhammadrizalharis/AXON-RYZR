@@ -90,16 +90,13 @@ export class JobsProcessor extends WorkerHost {
 
     return buildTextToImageWorkflow({
       prompt,
-      negativePrompt,
       width: params.width,
       height: params.height,
       steps: params.steps,
-      cfg: params.cfg,
       seed: params.seed,
-      samplerName: params.samplerName,
-      scheduler: params.scheduler,
-      checkpoint: params.checkpoint,
       batchSize: params.batchSize,
+      guidance: params.guidance,
+      samplerName: params.samplerName,
     });
   }
 
