@@ -1,10 +1,15 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  NotImplementedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JobStatus, JobType, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 import { JobsService } from '../jobs/jobs.service';
-import { QuotaConfig } from '../config/configuration';
+import { ComfyuiConfig, QuotaConfig } from '../config/configuration';
 import { GenerationParams } from '../jobs/jobs.constants';
 import { serializeBigInt } from '../common/utils/serialize';
 import { CreateImageDto } from './dto/create-image.dto';
@@ -21,6 +26,7 @@ import {
 export class GenerationService {
   private readonly logger = new Logger(GenerationService.name);
   private readonly quota: QuotaConfig;
+  private readonly videoEnabled: boolean;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -29,6 +35,8 @@ export class GenerationService {
     config: ConfigService,
   ) {
     this.quota = config.getOrThrow<QuotaConfig>('quota');
+    this.videoEnabled =
+      config.getOrThrow<ComfyuiConfig>('comfyui').videoEnabled;
   }
 
   async createImageJob(userId: string, dto: CreateImageDto) {
@@ -63,6 +71,12 @@ export class GenerationService {
   }
 
   async createVideoJob(userId: string, dto: CreateVideoDto) {
+    if (!this.videoEnabled) {
+      throw new NotImplementedException(
+        'Text-to-video belum tersedia: model & node video belum terpasang di ' +
+          'ComfyUI. Aktifkan lewat COMFYUI_VIDEO_ENABLED=true setelah tersedia.',
+      );
+    }
     const cost = this.quota.videoCreditCost;
     const fps = dto.fps ?? 8;
     const duration = dto.duration ?? 2;

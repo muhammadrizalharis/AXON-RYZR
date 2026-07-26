@@ -34,6 +34,7 @@ export interface ComfyuiConfig {
   baseUrl: string;
   timeoutMs: number;
   pollIntervalMs: number;
+  videoEnabled: boolean;
 }
 
 export interface QuotaConfig {
@@ -107,6 +108,7 @@ export default (): Configuration => ({
     baseUrl: process.env.COMFYUI_BASE_URL ?? 'http://127.0.0.1:8188',
     timeoutMs: toNumber(process.env.COMFYUI_TIMEOUT_MS, 600000),
     pollIntervalMs: toNumber(process.env.COMFYUI_POLL_INTERVAL_MS, 1500),
+    videoEnabled: toBool(process.env.COMFYUI_VIDEO_ENABLED, false),
   },
   quota: {
     defaultUserCredits: toNumber(process.env.DEFAULT_USER_CREDITS, 100),
