@@ -14,6 +14,7 @@ import { useJobs } from '@/features/generation/use-jobs';
 import { JobCard } from '@/features/generation/job-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuthStore } from '@/store/auth-store';
+import { CountUp, Typewriter } from '@/components/fx/animated';
 import { cn, formatBytes } from '@/lib/utils';
 
 export default function DashboardPage() {
@@ -29,7 +30,7 @@ export default function DashboardPage() {
   const stats = [
     {
       label: 'Credits',
-      value: String(u?.credits ?? 0),
+      num: u?.credits ?? 0,
       icon: Coins,
       color: 'text-cyan',
     },
@@ -41,17 +42,23 @@ export default function DashboardPage() {
     },
     {
       label: 'Total Renders',
-      value: String(total),
+      num: total,
       icon: Images,
       color: 'text-accent',
     },
     {
       label: 'Completed (recent)',
-      value: String(completed),
+      num: completed,
       icon: CheckCircle2,
       color: 'text-emerald-400',
     },
-  ];
+  ] as Array<{
+    label: string;
+    num?: number;
+    value?: string;
+    icon: typeof Coins;
+    color: string;
+  }>;
 
   return (
     <div className="mx-auto max-w-[1400px] space-y-6">
@@ -60,12 +67,11 @@ export default function DashboardPage() {
           <p className="text-[11px] uppercase tracking-[0.3em] text-cyan/80">
             Welcome back
           </p>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground">
+          <h1 className="mt-1 font-display text-2xl font-bold tracking-tight text-foreground">
             {u?.name ?? 'Operator'}
           </h1>
           <p className="mt-1 max-w-lg text-sm text-muted-foreground">
-            Your on-premise generative studio is online. Spin up a new image or
-            video render on the campus GPU.
+            <Typewriter text="Your on-premise generative studio is online. Spin up a new image or video render on the campus GPU." />
           </p>
           <Link
             href="/create"
@@ -86,10 +92,10 @@ export default function DashboardPage() {
                 <span className="text-[11px] uppercase tracking-widest text-muted-foreground">
                   {s.label}
                 </span>
-                <Icon className={cn('h-5 w-5', s.color)} />
+                <Icon className={cn('h-5 w-5 animate-glow-pulse', s.color)} />
               </div>
-              <p className="mt-2 text-2xl font-bold text-foreground">
-                {s.value}
+              <p className="mt-2 font-display text-2xl font-bold text-foreground">
+                {s.num !== undefined ? <CountUp value={s.num} /> : s.value}
               </p>
             </div>
           );

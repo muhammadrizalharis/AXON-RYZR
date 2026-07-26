@@ -68,6 +68,10 @@ export function JobCard({ job }: { job: Job }) {
             </span>
           )}
 
+          {isActive && (
+            <span className="animate-scan pointer-events-none absolute inset-x-6 h-px bg-cyan/70 shadow-[0_0_10px_hsl(var(--cyan))]" />
+          )}
+
           <span className="absolute left-2 top-2 flex gap-1.5">
             <span
               className={cn(

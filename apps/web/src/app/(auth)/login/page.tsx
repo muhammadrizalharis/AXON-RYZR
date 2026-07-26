@@ -10,14 +10,19 @@ import {
   Lock,
   Mail,
   ShieldCheck,
-  ScanFace,
-  Fingerprint,
   ChevronsRight,
+  ChevronsLeft,
   Eye,
   EyeOff,
 } from 'lucide-react';
 import { useLogin } from '@/features/auth/use-auth';
-import { cn } from '@/lib/utils';
+import {
+  HudRings,
+  WireframeFace,
+  FingerprintScan,
+  CircuitTrace,
+  Corners,
+} from '@/components/fx/decor';
 
 const schema = z.object({
   email: z.string().email('Masukkan email yang valid'),
@@ -36,123 +41,128 @@ export default function LoginPage() {
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
   return (
-    <div className="mx-auto w-full max-w-6xl animate-fade-in">
-      <div className="mb-6 flex items-center justify-center gap-2">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-cyan to-primary glow-cyan">
-          <span className="text-lg font-black text-white">A</span>
-        </div>
-        <div className="leading-none">
-          <p className="text-lg font-black tracking-tight holo-text">AURA</p>
-          <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground">
-            Creative Studio
-          </p>
-        </div>
-      </div>
+    <div className="relative mx-auto w-full max-w-6xl animate-fade-in">
+      {/* rotating HUD rings behind the card */}
+      <HudRings className="left-1/2 top-1/2 hidden h-[580px] w-[580px] -translate-x-1/2 -translate-y-1/2 opacity-80 md:block" />
 
-      <div className="grid items-center gap-5 lg:grid-cols-[1fr_minmax(0,470px)_1fr]">
-        {/* LEFT — Neural Face Scan */}
-        <aside className="hidden flex-col items-center gap-3 lg:flex">
-          <div className="hud-grid relative flex h-52 w-52 items-center justify-center overflow-hidden rounded-2xl border border-cyan/25 bg-card/40">
-            <div className="animate-scan pointer-events-none absolute inset-x-4 h-px bg-cyan/70 shadow-[0_0_12px_hsl(var(--cyan))]" />
-            <ScanFace
-              className="animate-glow-pulse h-28 w-28 text-cyan/80"
-              strokeWidth={1}
-            />
-            <span className="absolute bottom-2 rounded bg-background/70 px-2 py-0.5 text-[9px] uppercase tracking-[0.25em] text-cyan/80">
-              scanning…
-            </span>
-          </div>
-          <p className="text-[11px] uppercase tracking-[0.3em] text-muted-foreground">
-            Neural Face Scan
-          </p>
-        </aside>
-
-        {/* CENTER — Super Admin Access */}
-        <div className="hud-panel rounded-2xl p-6 shadow-2xl sm:p-8">
-          <div className="mb-6 text-center">
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-cyan to-primary glow-cyan">
-              <ShieldCheck className="h-6 w-6 text-white" />
+      <div className="relative grid items-center gap-8 lg:grid-cols-[1fr_minmax(0,500px)_1fr]">
+        {/* ── LEFT · NEURAL FACE SCAN ─────────────────────────────── */}
+        <aside className="hidden flex-col items-center gap-4 lg:flex">
+          <div className="relative w-full max-w-[250px] p-4">
+            <Corners />
+            <p className="mb-2 text-center font-display text-[10px] tracking-[0.35em] text-cyan/90 text-glow">
+              NEURAL FACE SCAN
+            </p>
+            <div className="relative overflow-hidden">
+              <WireframeFace className="animate-float mx-auto h-44 w-44" />
+              <span className="animate-scan pointer-events-none absolute inset-x-2 h-px bg-cyan shadow-[0_0_14px_hsl(var(--cyan))]" />
             </div>
-            <h1 className="flex items-center justify-center gap-2 text-2xl font-bold tracking-tight text-foreground">
-              Super Admin Access
-              <Lock className="h-4 w-4 neon-cyan" />
-            </h1>
-            <p className="mt-1 text-[11px] uppercase tracking-[0.28em] text-accent/80">
-              System Access Restricted · Level Omega
+            <p className="mt-2 text-center font-display text-[9px] tracking-[0.3em] text-cyan/50">
+              NEURAL FACE SCAN
             </p>
           </div>
+          <div className="w-full max-w-[250px] space-y-1.5 px-4">
+            {[82, 64, 91].map((w, i) => (
+              <div key={i} className="h-1 overflow-hidden rounded-full bg-cyan/10">
+                <div
+                  className="bar-sweep h-full rounded-full bg-cyan/40"
+                  style={{ width: `${w}%` }}
+                />
+              </div>
+            ))}
+          </div>
+        </aside>
+
+        {/* ── CENTER · SUPER ADMIN ACCESS ─────────────────────────── */}
+        <div className="hud-panel relative rounded-3xl p-6 shadow-[0_0_70px_hsl(var(--primary)/0.28)] sm:p-8">
+          <h1 className="flex items-center justify-center gap-3 text-center font-display text-2xl font-bold tracking-wide text-white sm:text-3xl">
+            Super Admin Access
+            <Lock className="h-5 w-5 neon-magenta" />
+          </h1>
 
           <form
             onSubmit={handleSubmit((v) => login.mutate(v))}
-            className="space-y-4"
+            className="mt-7 space-y-5"
           >
-            <div className="space-y-1.5">
-              <label className="text-[11px] uppercase tracking-widest text-muted-foreground">
-                Super Admin Email
-              </label>
-              <div className="relative">
-                <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan/70" />
-                <input
-                  type="email"
-                  autoComplete="email"
-                  placeholder="admin@axon.local"
-                  className="h-12 w-full rounded-xl border border-cyan/25 bg-background/60 pl-10 pr-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/60 focus:border-cyan focus:glow-cyan"
-                  {...register('email')}
-                />
+            {/* email */}
+            <div>
+              <div className="rounded-2xl bg-gradient-to-r from-cyan/70 via-primary/50 to-accent/70 p-px glow-cyan transition focus-within:shadow-[0_0_26px_hsl(var(--cyan)/0.5)]">
+                <div className="flex h-14 items-center gap-3 rounded-[15px] bg-background/85 px-4 backdrop-blur">
+                  <Mail className="h-5 w-5 shrink-0 text-cyan" />
+                  <input
+                    type="email"
+                    autoComplete="email"
+                    placeholder="Super Admin Email"
+                    className="h-full min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:tracking-wider placeholder:text-muted-foreground/70"
+                    {...register('email')}
+                  />
+                  <CircuitTrace className="hidden h-6 w-20 shrink-0 text-cyan/50 sm:block" />
+                  <Mail className="hidden h-4 w-4 shrink-0 text-accent/50 sm:block" />
+                </div>
               </div>
               {errors.email && (
-                <p className="text-xs text-destructive">{errors.email.message}</p>
+                <p className="mt-1 text-xs text-destructive">
+                  {errors.email.message}
+                </p>
               )}
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-[11px] uppercase tracking-widest text-muted-foreground">
-                Security Password
-              </label>
-              <div className="relative">
-                <ShieldCheck className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-accent/70" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="current-password"
-                  placeholder="••••••••••••"
-                  className="h-12 w-full rounded-xl border border-accent/25 bg-background/60 pl-10 pr-10 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/60 focus:border-accent focus:glow-magenta"
-                  {...register('password')}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((s) => !s)}
-                  tabIndex={-1}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition hover:text-foreground"
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </button>
+            {/* password */}
+            <div>
+              <div className="rounded-2xl bg-gradient-to-r from-accent/70 via-primary/50 to-cyan/70 p-px glow-magenta transition focus-within:shadow-[0_0_26px_hsl(var(--accent)/0.5)]">
+                <div className="flex h-14 items-center gap-3 rounded-[15px] bg-background/85 px-4 backdrop-blur">
+                  <ShieldCheck className="h-5 w-5 shrink-0 text-accent" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    placeholder="Security Password"
+                    className="h-full min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:tracking-wider placeholder:text-muted-foreground/70"
+                    {...register('password')}
+                  />
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    onClick={() => setShowPassword((s) => !s)}
+                    className="text-muted-foreground transition hover:text-foreground"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                  <CircuitTrace className="hidden h-6 w-14 shrink-0 text-accent/50 sm:block" />
+                </div>
               </div>
               {errors.password && (
-                <p className="text-xs text-destructive">
+                <p className="mt-1 text-xs text-destructive">
                   {errors.password.message}
                 </p>
               )}
             </div>
 
-            <button
-              type="submit"
-              disabled={login.isPending}
-              className="flex h-12 w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-accent via-primary to-cyan text-sm font-bold uppercase tracking-[0.2em] text-white shadow-lg shadow-primary/30 transition hover:shadow-[0_0_30px_hsl(var(--primary)/0.5)] disabled:opacity-60"
-            >
-              {login.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <ChevronsRight className="h-4 w-4" />
-              )}
-              Secure Login
-            </button>
+            {/* SECURE LOGIN */}
+            <div className="rounded-2xl bg-gradient-to-r from-cyan via-primary to-accent p-[2px] shadow-[0_0_30px_hsl(var(--cyan)/0.45),0_0_30px_hsl(var(--accent)/0.35)] transition hover:shadow-[0_0_48px_hsl(var(--cyan)/0.65),0_0_48px_hsl(var(--accent)/0.55)]">
+              <button
+                type="submit"
+                disabled={login.isPending}
+                className="shimmer group flex h-14 w-full items-center justify-center gap-3 rounded-[14px] bg-background/70 font-display text-base font-bold uppercase tracking-[0.3em] text-white backdrop-blur disabled:opacity-60"
+              >
+                <ChevronsLeft className="h-5 w-5 text-cyan transition group-hover:-translate-x-1" />
+                {login.isPending ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <span className="text-glow">Secure Login</span>
+                )}
+                <ChevronsRight className="h-5 w-5 text-accent transition group-hover:translate-x-1" />
+              </button>
+            </div>
           </form>
 
-          <p className="mt-5 text-center text-xs text-muted-foreground">
+          <p className="mt-6 text-center font-display text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
+            Authorized Personnel Only · System Access Restricted
+          </p>
+          <p className="mt-2 text-center text-xs text-muted-foreground/80">
             Belum punya akses?{' '}
             <Link href="/register" className="neon-cyan hover:underline">
               Ajukan akun
@@ -160,37 +170,39 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* RIGHT — Biometric */}
-        <aside className="hidden flex-col items-center gap-4 lg:flex">
-          {[0, 1].map((i) => (
-            <div
-              key={i}
-              className="relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl border border-accent/25 bg-card/40"
-            >
-              <div
-                className="animate-scan pointer-events-none absolute inset-x-3 h-px bg-accent/70 shadow-[0_0_10px_hsl(var(--accent))]"
-                style={{ animationDelay: `${i * 0.6}s` }}
-              />
-              <Fingerprint
-                className={cn(
-                  'animate-glow-pulse h-14 w-14',
-                  i === 0 ? 'text-cyan/80' : 'text-accent/80',
-                )}
-                strokeWidth={1}
-              />
+        {/* ── RIGHT · BIOMETRIC ───────────────────────────────────── */}
+        <aside className="hidden flex-col items-center gap-5 lg:flex">
+          <div className="flex w-full max-w-[250px] items-end gap-4 px-2">
+            <div className="relative flex-1 p-3">
+              <Corners color="border-cyan/60" />
+              <FingerprintScan className="mx-auto h-16 w-16" delay={0} />
             </div>
-          ))}
-          <p className="text-center text-[10px] uppercase leading-relaxed tracking-[0.2em] text-muted-foreground">
-            Biometric &amp; Neural
-            <br />
-            Scan Required
+            <div className="relative flex-[1.4] p-3">
+              <Corners color="border-accent/60" />
+              <FingerprintScan className="mx-auto h-24 w-24" delay={0.7} accent />
+            </div>
+          </div>
+          <p className="max-w-[240px] text-center font-display text-[9px] uppercase leading-relaxed tracking-[0.28em] text-muted-foreground">
+            Biometric and Neural Scan Required
           </p>
+          <p className="text-danger-flicker max-w-[250px] text-center font-display text-[10px] font-bold uppercase tracking-[0.2em]">
+            System Access Restricted — Level Omega.
+          </p>
+          <div className="w-full max-w-[220px] space-y-1.5">
+            {[70, 45, 88, 58].map((w, i) => (
+              <div
+                key={i}
+                className="h-1 overflow-hidden rounded-full bg-accent/10"
+              >
+                <div
+                  className="bar-sweep h-full rounded-full bg-accent/40"
+                  style={{ width: `${w}%` }}
+                />
+              </div>
+            ))}
+          </div>
         </aside>
       </div>
-
-      <p className="mt-7 text-center text-[11px] uppercase tracking-[0.32em] text-muted-foreground">
-        Authorized Personnel Only · System Access Restricted
-      </p>
     </div>
   );
 }

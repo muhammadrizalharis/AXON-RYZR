@@ -209,8 +209,8 @@
   50% { opacity: 1; }
 }
 @keyframes scanMove {
-  0%, 100% { transform: translateY(-42%); opacity: 0.15; }
-  50% { transform: translateY(42%); opacity: 0.9; }
+  0%, 100% { top: 6%; opacity: 0.15; }
+  50% { top: 92%; opacity: 1; }
 }
 @keyframes flicker {
   0%, 19%, 21%, 23%, 80%, 100% { opacity: 1; }
@@ -237,4 +237,143 @@
 }
 ::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(hsl(var(--cyan) / 0.8), hsl(var(--primary) / 0.8));
+}
+
+/* ===================================================================== */
+/* FX layer — perspective floor, binary rain, particles, sweeps          */
+/* ===================================================================== */
+@layer utilities {
+  .font-display {
+    font-family: var(--font-display), var(--font-sans), sans-serif;
+    letter-spacing: 0.04em;
+  }
+}
+
+/* Perspective floor grid (tron-style) */
+.floor-grid {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2%;
+  height: 52%;
+  pointer-events: none;
+  background-image:
+    linear-gradient(hsl(var(--cyan) / 0.22) 1px, transparent 1px),
+    linear-gradient(90deg, hsl(var(--cyan) / 0.22) 1px, transparent 1px);
+  background-size: 44px 44px;
+  transform: perspective(520px) rotateX(62deg) scale(1.7);
+  transform-origin: 50% 100%;
+  -webkit-mask-image: linear-gradient(to top, black 25%, transparent 95%);
+  mask-image: linear-gradient(to top, black 25%, transparent 95%);
+  animation: floorMove 1.6s linear infinite;
+}
+@keyframes floorMove {
+  from { background-position: 0 0; }
+  to { background-position: 0 44px; }
+}
+
+/* Reverse slow spin */
+.animate-spin-reverse {
+  animation: spinSlow 22s linear infinite reverse;
+}
+
+/* Light sweep across buttons/cards */
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 40%;
+  background: linear-gradient(105deg, transparent, hsl(0 0% 100% / 0.22), transparent);
+  transform: translateX(-150%) skewX(-12deg);
+  animation: shimmerSweep 3s ease-in-out infinite;
+}
+@keyframes shimmerSweep {
+  0% { transform: translateX(-160%) skewX(-12deg); }
+  60%, 100% { transform: translateX(320%) skewX(-12deg); }
+}
+
+/* Falling binary columns */
+.binary-rain {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.binary-rain-col {
+  position: absolute;
+  top: 0;
+  animation: rainFall linear infinite;
+}
+@keyframes rainFall {
+  from { transform: translateY(-50%); }
+  to { transform: translateY(0%); }
+}
+
+/* Floating neon particles */
+.particle {
+  position: absolute;
+  bottom: -3vh;
+  border-radius: 9999px;
+  pointer-events: none;
+  animation: particleFloat linear infinite;
+}
+@keyframes particleFloat {
+  0% { transform: translateY(0) scale(1); opacity: 0; }
+  12% { opacity: 0.9; }
+  85% { opacity: 0.4; }
+  100% { transform: translateY(-108vh) scale(0.5); opacity: 0; }
+}
+
+/* Typewriter caret */
+.type-caret {
+  display: inline-block;
+  width: 0.6ch;
+  color: hsl(var(--cyan));
+  animation: caretBlink 1s steps(1) infinite;
+}
+@keyframes caretBlink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+/* Expanding pulse ring (avatars, beacons) */
+.animate-ring-pulse {
+  animation: ringPulse 2.4s ease-out infinite;
+}
+@keyframes ringPulse {
+  0% { box-shadow: 0 0 0 0 hsl(var(--cyan) / 0.5); }
+  70% { box-shadow: 0 0 0 12px hsl(var(--cyan) / 0); }
+  100% { box-shadow: 0 0 0 0 hsl(var(--cyan) / 0); }
+}
+
+/* Energy sweep inside progress tracks */
+.bar-sweep {
+  position: relative;
+  overflow: hidden;
+}
+.bar-sweep::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 35%;
+  background: linear-gradient(90deg, transparent, hsl(var(--cyan) / 0.75), transparent);
+  animation: barSweep 1.6s linear infinite;
+}
+@keyframes barSweep {
+  from { transform: translateX(-110%); }
+  to { transform: translateX(320%); }
+}
+
+/* Flickering red warning text */
+.text-danger-flicker {
+  color: hsl(0 90% 62%);
+  text-shadow: 0 0 8px hsl(0 90% 62% / 0.7);
+  animation: flicker 3.4s linear infinite;
 }

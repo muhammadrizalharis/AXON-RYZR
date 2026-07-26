@@ -46,8 +46,8 @@ function GalleryContent() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
-            <Images className="h-6 w-6 text-cyan" />
-            <span className="holo-text">My Gallery</span>
+            <Images className="h-6 w-6 animate-glow-pulse text-cyan" />
+            <span className="holo-text font-display">My Gallery</span>
           </h1>
           <p className="text-sm text-muted-foreground">
             {items.length} item{items.length === 1 ? '' : 's'} ·{' '}

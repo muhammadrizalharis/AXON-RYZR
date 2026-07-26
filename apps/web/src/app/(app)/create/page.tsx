@@ -183,8 +183,13 @@ function StatusFooter({ jobs }: { jobs: Job[] }) {
               </span>
               <span className="text-xs text-muted-foreground">{it.sub}</span>
             </div>
-            <p className="mt-1 text-2xl font-bold text-foreground">{it.value}</p>
-            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-background/60">
+            <p className="mt-1 font-display text-2xl font-bold text-foreground">{it.value}</p>
+            <div
+              className={cn(
+                'mt-2 h-1.5 w-full overflow-hidden rounded-full bg-background/60',
+                it.label === 'Active Renders' && it.pct > 0 && 'bar-sweep',
+              )}
+            >
               <div
                 className={cn('h-full rounded-full bg-gradient-to-r', it.color)}
                 style={{ width: `${it.pct}%` }}
@@ -205,8 +210,8 @@ export default function CreatePage() {
     <div className="mx-auto max-w-[1500px] space-y-5">
       <div>
         <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
-          <Sparkles className="h-6 w-6 text-cyan" />
-          <span className="holo-text">Creation Hub</span>
+          <Sparkles className="h-6 w-6 animate-glow-pulse text-cyan" />
+          <span className="holo-text font-display">Creation Hub</span>
         </h1>
         <p className="text-sm text-muted-foreground">
           Describe your vision and render it on the campus GPU.

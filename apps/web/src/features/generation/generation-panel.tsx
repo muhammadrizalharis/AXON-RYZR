@@ -160,7 +160,7 @@ export function GenerationPanel() {
             type="button"
             onClick={submitImage}
             disabled={!canSubmit}
-            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan to-primary px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-cyan/20 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+            className="shimmer flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan to-primary px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-cyan/20 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {generateImage.isPending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -173,7 +173,7 @@ export function GenerationPanel() {
             type="button"
             onClick={submitVideo}
             disabled={!canSubmit}
-            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-primary to-accent px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-primary/20 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+            className="shimmer flex items-center gap-2 rounded-xl bg-gradient-to-r from-primary to-accent px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-primary/20 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {generateVideo.isPending ? (
               <Loader2 className="h-4 w-4 animate-spin" />

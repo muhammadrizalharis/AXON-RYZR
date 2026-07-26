@@ -38,18 +38,6 @@ export default function RegisterPage() {
 
   return (
     <div className="mx-auto w-full max-w-md animate-fade-in">
-      <div className="mb-6 flex items-center justify-center gap-2">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-cyan to-primary glow-cyan">
-          <span className="text-lg font-black text-white">A</span>
-        </div>
-        <div className="leading-none">
-          <p className="text-lg font-black tracking-tight holo-text">AURA</p>
-          <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground">
-            Creative Studio
-          </p>
-        </div>
-      </div>
-
       <div className="hud-panel rounded-2xl p-6 shadow-2xl sm:p-8">
         <div className="mb-6 text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent glow-violet">

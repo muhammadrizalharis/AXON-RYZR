@@ -46,8 +46,8 @@ export default function ProjectsPage() {
     <div className="mx-auto max-w-5xl space-y-6">
       <div>
         <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
-          <FolderKanban className="h-6 w-6 text-cyan" />
-          <span className="holo-text">Projects</span>
+          <FolderKanban className="h-6 w-6 animate-glow-pulse text-cyan" />
+          <span className="holo-text font-display">Projects</span>
         </h1>
         <p className="text-sm text-muted-foreground">
           Organize your creations into projects.

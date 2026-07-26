@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { Sidebar, MobileNav } from '@/components/layout/sidebar';
 import { Topbar } from '@/components/layout/topbar';
 import { useAuthStore } from '@/store/auth-store';
 import { useJobUpdates } from '@/features/realtime/use-job-updates';
+import { Particles } from '@/components/fx/decor';
 
 export default function AppLayout({
   children,
@@ -13,6 +14,7 @@ export default function AppLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const accessToken = useAuthStore((s) => s.accessToken);
   const isHydrated = useAuthStore((s) => s.isHydrated);
   const [checked, setChecked] = useState(false);
@@ -39,11 +41,16 @@ export default function AppLayout({
 
   return (
     <div className="aurora hud-grid relative flex min-h-screen bg-background">
+      <Particles count={12} />
       <Sidebar />
       <MobileNav />
       <div className="relative z-10 flex min-w-0 flex-1 flex-col">
         <Topbar />
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto p-4 md:p-6">
+          <div key={pathname} className="animate-fade-in">
+            {children}
+          </div>
+        </main>
       </div>
     </div>
   );
