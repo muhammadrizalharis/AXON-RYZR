@@ -1,34 +1,186 @@
 'use client';
 
-import { Sparkles } from 'lucide-react';
+import {
+  Sparkles,
+  SlidersHorizontal,
+  History,
+  Library,
+  Activity,
+  CheckCircle2,
+  XCircle,
+} from 'lucide-react';
+import type { Job } from '@axon-ryzr/shared';
 import { GenerationPanel } from '@/features/generation/generation-panel';
 import { JobCard } from '@/features/generation/job-card';
 import { useJobs } from '@/features/generation/use-jobs';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
+
+const PROMPT_LIBRARY = [
+  'A serene mountain landscape at golden hour, ultra detailed',
+  'Cyberpunk city street, neon reflections, rain, cinematic',
+  'Portrait of an astronaut, studio lighting, 85mm lens',
+  'Cozy coffee shop interior, warm bokeh, photorealistic',
+];
+
+const PRESET_PARAMS = [
+  { label: 'Aspect Ratio', value: '16:9' },
+  { label: 'Style', value: 'Cinematic' },
+  { label: 'Resolution', value: '4K' },
+  { label: 'Duration', value: '15s' },
+  { label: 'FPS', value: '60' },
+];
+
+function WorkspacePanel({ jobs }: { jobs: Job[] }) {
+  const history = jobs.slice(0, 6);
+  return (
+    <aside className="space-y-4">
+      <div className="hud-panel rounded-2xl p-4">
+        <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
+          <SlidersHorizontal className="h-4 w-4 text-cyan" /> Parameters
+        </h3>
+        <ul className="space-y-2">
+          {PRESET_PARAMS.map((p) => (
+            <li
+              key={p.label}
+              className="flex items-center justify-between text-xs"
+            >
+              <span className="text-muted-foreground">{p.label}</span>
+              <span className="rounded-md border border-cyan/20 bg-cyan/5 px-2 py-0.5 font-medium text-cyan">
+                {p.value}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="hud-panel rounded-2xl p-4">
+        <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
+          <History className="h-4 w-4 text-cyan" /> History
+        </h3>
+        {history.length ? (
+          <ul className="space-y-2">
+            {history.map((j) => (
+              <li
+                key={j.id}
+                title={j.prompt}
+                className="line-clamp-1 rounded-md border border-border/50 bg-background/40 px-2 py-1.5 text-xs text-muted-foreground"
+              >
+                {j.prompt}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-xs text-muted-foreground">No history yet.</p>
+        )}
+      </div>
+
+      <div className="hud-panel rounded-2xl p-4">
+        <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
+          <Library className="h-4 w-4 text-cyan" /> Prompts Library
+        </h3>
+        <ul className="space-y-2">
+          {PROMPT_LIBRARY.map((p) => (
+            <li
+              key={p}
+              className="line-clamp-2 rounded-md border border-border/50 bg-background/40 px-2 py-1.5 text-xs text-muted-foreground"
+            >
+              {p}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </aside>
+  );
+}
+
+function StatusFooter({ jobs }: { jobs: Job[] }) {
+  const active = jobs.filter(
+    (j) => j.status === 'QUEUED' || j.status === 'RENDERING',
+  );
+  const completed = jobs.filter((j) => j.status === 'COMPLETED');
+  const failed = jobs.filter((j) => j.status === 'FAILED');
+  const avg = active.length
+    ? Math.round(
+        active.reduce((s, j) => s + (j.progress ?? 0), 0) / active.length,
+      )
+    : 0;
+
+  const items = [
+    {
+      label: 'Active Renders',
+      value: String(active.length),
+      sub: `${avg}%`,
+      pct: avg,
+      color: 'from-cyan to-primary',
+      icon: Activity,
+    },
+    {
+      label: 'Completed',
+      value: String(completed.length),
+      sub: 'done',
+      pct: 100,
+      color: 'from-emerald-400 to-cyan',
+      icon: CheckCircle2,
+    },
+    {
+      label: 'Failed',
+      value: String(failed.length),
+      sub: failed.length ? 'check logs' : 'none',
+      pct: failed.length ? 100 : 0,
+      color: 'from-accent to-primary',
+      icon: XCircle,
+    },
+  ];
+
+  return (
+    <div className="grid gap-4 sm:grid-cols-3">
+      {items.map((it) => {
+        const Icon = it.icon;
+        return (
+          <div key={it.label} className="hud-panel rounded-2xl p-4">
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-2 text-[11px] uppercase tracking-widest text-muted-foreground">
+                <Icon className="h-4 w-4 text-cyan" /> {it.label}
+              </span>
+              <span className="text-xs text-muted-foreground">{it.sub}</span>
+            </div>
+            <p className="mt-1 text-2xl font-bold text-foreground">{it.value}</p>
+            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-background/60">
+              <div
+                className={cn('h-full rounded-full bg-gradient-to-r', it.color)}
+                style={{ width: `${it.pct}%` }}
+              />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 export default function CreatePage() {
   const { data, isLoading } = useJobs({ take: 12 });
+  const jobs = data?.items ?? [];
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <div className="mx-auto max-w-[1500px] space-y-5">
       <div>
         <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
-          <Sparkles className="h-6 w-6 text-primary" />
-          Creation Hub
+          <Sparkles className="h-6 w-6 text-cyan" />
+          <span className="holo-text">Creation Hub</span>
         </h1>
         <p className="text-sm text-muted-foreground">
-          Turn your ideas into images and video on the campus GPU.
+          Describe your vision and render it on the campus GPU.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,420px)_1fr]">
-        <div className="lg:sticky lg:top-6 lg:self-start">
-          <GenerationPanel />
-        </div>
+      <GenerationPanel />
 
+      <div className="grid gap-5 xl:grid-cols-[1fr_320px]">
         <div className="space-y-3">
           <h2 className="text-sm font-semibold text-muted-foreground">
-            Recent generations
+            Recent Generations
           </h2>
 
           {isLoading ? (
@@ -37,14 +189,14 @@ export default function CreatePage() {
                 <Skeleton key={i} className="aspect-square rounded-xl" />
               ))}
             </div>
-          ) : data && data.items.length > 0 ? (
+          ) : jobs.length > 0 ? (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-              {data.items.map((job) => (
+              {jobs.map((job) => (
                 <JobCard key={job.id} job={job} />
               ))}
             </div>
           ) : (
-            <div className="flex h-64 flex-col items-center justify-center rounded-xl border border-dashed border-border text-center">
+            <div className="flex h-64 flex-col items-center justify-center rounded-2xl border border-dashed border-border text-center">
               <Sparkles className="mb-2 h-8 w-8 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">
                 No generations yet. Create your first one!
@@ -52,7 +204,11 @@ export default function CreatePage() {
             </div>
           )}
         </div>
+
+        <WorkspacePanel jobs={jobs} />
       </div>
+
+      <StatusFooter jobs={jobs} />
     </div>
   );
 }

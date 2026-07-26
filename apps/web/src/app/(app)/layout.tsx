@@ -31,16 +31,16 @@ export default function AppLayout({
 
   if (!isHydrated || !checked) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      <div className="aurora flex min-h-screen items-center justify-center bg-background">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-cyan border-t-transparent" />
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div className="aurora hud-grid relative flex min-h-screen bg-background">
       <Sidebar />
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="relative z-10 flex min-w-0 flex-1 flex-col">
         <Topbar />
         <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
       </div>

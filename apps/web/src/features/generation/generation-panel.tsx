@@ -1,16 +1,17 @@
 'use client';
 
 import { useState } from 'react';
-import { Sparkles, Loader2, Wand2, Film } from 'lucide-react';
+import {
+  Loader2,
+  Image as ImageIcon,
+  Film,
+  SlidersHorizontal,
+} from 'lucide-react';
 import {
   AspectRatio,
   GenerationStyle,
   ImageResolution,
 } from '@axon-ryzr/shared';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -18,12 +19,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Card, CardContent } from '@/components/ui/card';
 import {
   useGenerateImage,
   useGenerateVideo,
 } from '@/features/generation/use-generate';
+import { cn } from '@/lib/utils';
 
 const ASPECT_OPTIONS: { value: AspectRatio; label: string }[] = [
   { value: AspectRatio.SQUARE, label: 'Square · 1:1' },
@@ -51,238 +51,260 @@ const RESOLUTION_OPTIONS: { value: ImageResolution; label: string }[] = [
   { value: ImageResolution.QHD, label: 'QHD · 1536' },
 ];
 
-export function GenerationPanel() {
-  const [tab, setTab] = useState<'image' | 'video'>('image');
+const labelCls =
+  'mb-1 block text-[11px] uppercase tracking-widest text-muted-foreground';
+const numberCls =
+  'h-10 w-full rounded-lg border border-border/60 bg-background/50 px-3 text-sm text-foreground outline-none transition focus:border-cyan/60';
 
-  // Shared fields
+export function GenerationPanel() {
   const [prompt, setPrompt] = useState('');
   const [negativePrompt, setNegativePrompt] = useState('');
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>(
-    AspectRatio.SQUARE,
+    AspectRatio.LANDSCAPE_16_9,
   );
-  const [style, setStyle] = useState<GenerationStyle>(GenerationStyle.NONE);
+  const [style, setStyle] = useState<GenerationStyle>(
+    GenerationStyle.CINEMATIC,
+  );
   const [resolution, setResolution] = useState<ImageResolution>(
     ImageResolution.FHD,
   );
-
-  // Image
   const [batchSize, setBatchSize] = useState(1);
   const [imageSteps, setImageSteps] = useState(25);
-
-  // Video
   const [duration, setDuration] = useState(2);
   const [fps, setFps] = useState(8);
   const [videoSteps, setVideoSteps] = useState(20);
+  const [advanced, setAdvanced] = useState(false);
+  const [model, setModel] = useState<'aura' | 'genesis'>('aura');
 
   const generateImage = useGenerateImage();
   const generateVideo = useGenerateVideo();
   const pending = generateImage.isPending || generateVideo.isPending;
-
   const canSubmit = prompt.trim().length >= 3 && !pending;
 
-  const handleGenerate = () => {
+  const submitImage = () => {
     if (!canSubmit) return;
-    if (tab === 'image') {
-      generateImage.mutate({
-        prompt,
-        negativePrompt: negativePrompt || undefined,
-        aspectRatio,
-        style,
-        resolution,
-        batchSize,
-        steps: imageSteps,
-      });
-    } else {
-      generateVideo.mutate({
-        prompt,
-        negativePrompt: negativePrompt || undefined,
-        aspectRatio,
-        style,
-        resolution,
-        duration,
-        fps,
-        steps: videoSteps,
-      });
-    }
+    generateImage.mutate({
+      prompt,
+      negativePrompt: negativePrompt || undefined,
+      aspectRatio,
+      style,
+      resolution,
+      batchSize,
+      steps: imageSteps,
+    });
+  };
+
+  const submitVideo = () => {
+    if (!canSubmit) return;
+    generateVideo.mutate({
+      prompt,
+      negativePrompt: negativePrompt || undefined,
+      aspectRatio,
+      style,
+      resolution,
+      duration,
+      fps,
+      steps: videoSteps,
+    });
   };
 
   return (
-    <Card className="border-border/60">
-      <CardContent className="p-4 md:p-5">
-        <Tabs value={tab} onValueChange={(v) => setTab(v as 'image' | 'video')}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="image">
-              <Wand2 className="h-4 w-4" /> Image
-            </TabsTrigger>
-            <TabsTrigger value="video">
-              <Film className="h-4 w-4" /> Video
-            </TabsTrigger>
-          </TabsList>
+    <div className="hud-panel rounded-2xl p-4 md:p-5">
+      <textarea
+        value={prompt}
+        onChange={(e) => setPrompt(e.target.value)}
+        placeholder="Describe your vision… e.g. A serene mountain landscape at golden hour, ultra detailed"
+        className="min-h-[84px] w-full resize-none rounded-xl border border-cyan/20 bg-background/40 p-4 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/60 focus:border-cyan/60 focus:glow-cyan"
+      />
 
-          <div className="mt-4 space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="prompt">Prompt</Label>
-              <Textarea
-                id="prompt"
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                placeholder="A serene mountain landscape at golden hour, ultra detailed…"
-                className="min-h-[96px] resize-none"
-              />
-            </div>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div className="w-44">
+          <Select
+            value={model}
+            onValueChange={(v) => setModel(v as 'aura' | 'genesis')}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="aura">Aura AI v4.0</SelectItem>
+              <SelectItem value="genesis">Genesis Motion</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="negative">Negative prompt (optional)</Label>
-              <Textarea
-                id="negative"
-                value={negativePrompt}
-                onChange={(e) => setNegativePrompt(e.target.value)}
-                placeholder="blurry, low quality, distorted…"
-                className="min-h-[56px] resize-none"
-              />
-            </div>
+        <button
+          type="button"
+          onClick={() => setAdvanced((a) => !a)}
+          className={cn(
+            'flex items-center gap-2 rounded-xl border px-3 py-2.5 text-sm transition',
+            advanced
+              ? 'border-cyan/60 text-cyan glow-cyan'
+              : 'border-border/60 text-muted-foreground hover:text-foreground',
+          )}
+        >
+          <SlidersHorizontal className="h-4 w-4" />
+          Advanced Settings
+        </button>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div className="space-y-2">
-                <Label>Aspect ratio</Label>
-                <Select
-                  value={aspectRatio}
-                  onValueChange={(v) => setAspectRatio(v as AspectRatio)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ASPECT_OPTIONS.map((o) => (
-                      <SelectItem key={o.value} value={o.value}>
-                        {o.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+        <div className="ml-auto flex gap-2">
+          <button
+            type="button"
+            onClick={submitImage}
+            disabled={!canSubmit}
+            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan to-primary px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-cyan/20 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {generateImage.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <ImageIcon className="h-4 w-4" />
+            )}
+            Generate Image
+          </button>
+          <button
+            type="button"
+            onClick={submitVideo}
+            disabled={!canSubmit}
+            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-primary to-accent px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-primary/20 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {generateVideo.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Film className="h-4 w-4" />
+            )}
+            Generate Video
+          </button>
+        </div>
+      </div>
 
-              <div className="space-y-2">
-                <Label>Style</Label>
-                <Select
-                  value={style}
-                  onValueChange={(v) => setStyle(v as GenerationStyle)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STYLE_OPTIONS.map((o) => (
-                      <SelectItem key={o.value} value={o.value}>
-                        {o.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Resolution</Label>
-                <Select
-                  value={resolution}
-                  onValueChange={(v) => setResolution(v as ImageResolution)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {RESOLUTION_OPTIONS.map((o) => (
-                      <SelectItem key={o.value} value={o.value}>
-                        {o.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <TabsContent value="image" className="mt-0 space-y-0">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label htmlFor="batch">Batch size</Label>
-                  <Input
-                    id="batch"
-                    type="number"
-                    min={1}
-                    max={4}
-                    value={batchSize}
-                    onChange={(e) => setBatchSize(Number(e.target.value))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="isteps">Steps</Label>
-                  <Input
-                    id="isteps"
-                    type="number"
-                    min={1}
-                    max={60}
-                    value={imageSteps}
-                    onChange={(e) => setImageSteps(Number(e.target.value))}
-                  />
-                </div>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="video" className="mt-0 space-y-0">
-              <div className="grid grid-cols-3 gap-3">
-                <div className="space-y-2">
-                  <Label htmlFor="duration">Duration (s)</Label>
-                  <Input
-                    id="duration"
-                    type="number"
-                    min={1}
-                    max={10}
-                    value={duration}
-                    onChange={(e) => setDuration(Number(e.target.value))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="fps">FPS</Label>
-                  <Input
-                    id="fps"
-                    type="number"
-                    min={4}
-                    max={30}
-                    value={fps}
-                    onChange={(e) => setFps(Number(e.target.value))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="vsteps">Steps</Label>
-                  <Input
-                    id="vsteps"
-                    type="number"
-                    min={1}
-                    max={60}
-                    value={videoSteps}
-                    onChange={(e) => setVideoSteps(Number(e.target.value))}
-                  />
-                </div>
-              </div>
-            </TabsContent>
-
-            <Button
-              variant="gradient"
-              size="lg"
-              className="w-full"
-              onClick={handleGenerate}
-              disabled={!canSubmit}
-            >
-              {pending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Sparkles className="h-4 w-4" />
-              )}
-              Generate {tab === 'image' ? 'Image' : 'Video'}
-            </Button>
+      {advanced && (
+        <div className="mt-4 space-y-3 border-t border-border/60 pt-4">
+          <div>
+            <label className={labelCls}>Negative prompt (optional)</label>
+            <textarea
+              value={negativePrompt}
+              onChange={(e) => setNegativePrompt(e.target.value)}
+              placeholder="blurry, low quality, distorted…"
+              className="min-h-[52px] w-full resize-none rounded-lg border border-border/60 bg-background/50 p-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/60 focus:border-cyan/60"
+            />
           </div>
-        </Tabs>
-      </CardContent>
-    </Card>
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div>
+              <label className={labelCls}>Aspect Ratio</label>
+              <Select
+                value={aspectRatio}
+                onValueChange={(v) => setAspectRatio(v as AspectRatio)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ASPECT_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className={labelCls}>Style</label>
+              <Select
+                value={style}
+                onValueChange={(v) => setStyle(v as GenerationStyle)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {STYLE_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className={labelCls}>Resolution</label>
+              <Select
+                value={resolution}
+                onValueChange={(v) => setResolution(v as ImageResolution)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {RESOLUTION_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            <div>
+              <label className={labelCls}>Batch</label>
+              <input
+                type="number"
+                min={1}
+                max={4}
+                value={batchSize}
+                onChange={(e) => setBatchSize(Number(e.target.value))}
+                className={numberCls}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>Image Steps</label>
+              <input
+                type="number"
+                min={1}
+                max={60}
+                value={imageSteps}
+                onChange={(e) => setImageSteps(Number(e.target.value))}
+                className={numberCls}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>Duration (s)</label>
+              <input
+                type="number"
+                min={1}
+                max={10}
+                value={duration}
+                onChange={(e) => setDuration(Number(e.target.value))}
+                className={numberCls}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>FPS</label>
+              <input
+                type="number"
+                min={4}
+                max={30}
+                value={fps}
+                onChange={(e) => setFps(Number(e.target.value))}
+                className={numberCls}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>Video Steps</label>
+              <input
+                type="number"
+                min={1}
+                max={60}
+                value={videoSteps}
+                onChange={(e) => setVideoSteps(Number(e.target.value))}
+                className={numberCls}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

@@ -4,24 +4,27 @@
 
 @layer base {
   :root {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 8% 6%;
-    --card-foreground: 0 0% 98%;
-    --primary: 262 83% 66%;
+    --background: 226 44% 5%;
+    --foreground: 190 30% 96%;
+    --card: 224 40% 8%;
+    --card-foreground: 190 22% 96%;
+    --popover: 224 42% 7%;
+    --popover-foreground: 190 22% 96%;
+    --primary: 265 90% 66%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 240 4% 16%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 4% 14%;
-    --muted-foreground: 240 5% 65%;
-    --accent: 292 84% 61%;
+    --secondary: 222 30% 14%;
+    --secondary-foreground: 190 20% 92%;
+    --muted: 222 24% 14%;
+    --muted-foreground: 210 16% 64%;
+    --accent: 300 90% 62%;
     --accent-foreground: 0 0% 100%;
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 4% 18%;
-    --input: 240 4% 18%;
-    --ring: 262 83% 66%;
-    --radius: 0.75rem;
+    --cyan: 186 100% 52%;
+    --destructive: 0 80% 58%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 200 45% 20%;
+    --input: 210 30% 16%;
+    --ring: 186 100% 52%;
+    --radius: 0.9rem;
   }
 }
 
@@ -37,27 +40,201 @@
   }
 }
 
-/* Aurora background accent */
+/* ===================================================================== */
+/* Cyberpunk backdrops                                                    */
+/* ===================================================================== */
 .aurora {
+  position: relative;
   background:
-    radial-gradient(
-      40rem 40rem at 15% -10%,
-      hsl(262 83% 66% / 0.18),
-      transparent 60%
-    ),
-    radial-gradient(
-      35rem 35rem at 100% 0%,
-      hsl(292 84% 61% / 0.15),
-      transparent 55%
-    );
+    radial-gradient(48rem 40rem at 12% -10%, hsl(186 100% 52% / 0.16), transparent 60%),
+    radial-gradient(42rem 38rem at 100% 0%, hsl(300 90% 62% / 0.16), transparent 58%),
+    radial-gradient(46rem 46rem at 60% 120%, hsl(265 90% 66% / 0.14), transparent 60%);
+  background-size: 200% 200%;
+  animation: auroraShift 26s ease-in-out infinite;
 }
 
-/* Thin scrollbar */
+/* Tech grid overlay — apply to a relative container */
+.hud-grid::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(hsl(186 100% 52% / 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, hsl(186 100% 52% / 0.06) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(70% 70% at 50% 40%, #000 40%, transparent 100%);
+  animation: gridPan 40s linear infinite;
+}
+
+.scanlines::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 2px,
+    hsl(186 100% 52% / 0.035) 3px,
+    transparent 4px
+  );
+  mix-blend-mode: overlay;
+}
+
+/* ===================================================================== */
+/* Glass / HUD panels                                                    */
+/* ===================================================================== */
+.glass {
+  background: hsl(var(--card) / 0.6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid hsl(var(--border) / 0.6);
+}
+
+.hud-panel {
+  position: relative;
+  background:
+    linear-gradient(hsl(var(--card) / 0.72), hsl(var(--card) / 0.72)) padding-box,
+    linear-gradient(135deg, hsl(186 100% 52% / 0.5), transparent 40%, hsl(300 90% 62% / 0.4)) border-box;
+  border: 1px solid transparent;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+.hud-panel::before,
+.hud-panel::after {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid hsl(var(--cyan) / 0.8);
+}
+.hud-panel::before {
+  top: -1px;
+  left: -1px;
+  border-right: none;
+  border-bottom: none;
+}
+.hud-panel::after {
+  bottom: -1px;
+  right: -1px;
+  border-left: none;
+  border-top: none;
+}
+
+/* ===================================================================== */
+/* Neon text, borders, glows                                             */
+/* ===================================================================== */
+.neon-cyan {
+  color: hsl(var(--cyan));
+  text-shadow: 0 0 6px hsl(var(--cyan) / 0.8), 0 0 18px hsl(var(--cyan) / 0.4);
+}
+.neon-magenta {
+  color: hsl(var(--accent));
+  text-shadow: 0 0 6px hsl(var(--accent) / 0.8), 0 0 18px hsl(var(--accent) / 0.4);
+}
+.neon-violet {
+  color: hsl(var(--primary));
+  text-shadow: 0 0 6px hsl(var(--primary) / 0.8), 0 0 18px hsl(var(--primary) / 0.4);
+}
+.holo-text {
+  background: linear-gradient(
+    100deg,
+    hsl(186 100% 60%),
+    hsl(265 90% 72%),
+    hsl(300 90% 66%),
+    hsl(186 100% 60%)
+  );
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: holo 8s linear infinite;
+}
+.glow-cyan {
+  box-shadow: 0 0 22px hsl(var(--cyan) / 0.35), inset 0 0 14px hsl(var(--cyan) / 0.12);
+}
+.glow-magenta {
+  box-shadow: 0 0 22px hsl(var(--accent) / 0.35), inset 0 0 14px hsl(var(--accent) / 0.12);
+}
+.glow-violet {
+  box-shadow: 0 0 26px hsl(var(--primary) / 0.4), inset 0 0 16px hsl(var(--primary) / 0.14);
+}
+.text-glow {
+  text-shadow: 0 0 10px currentColor;
+}
+
+/* ===================================================================== */
+/* Animations                                                            */
+/* ===================================================================== */
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+.animate-spin-slow {
+  animation: spinSlow 18s linear infinite;
+}
+.animate-glow-pulse {
+  animation: glowPulse 3s ease-in-out infinite;
+}
+.animate-scan {
+  animation: scanMove 3.5s ease-in-out infinite;
+}
+.animate-flicker {
+  animation: flicker 4s linear infinite;
+}
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out both;
+}
+
+@keyframes auroraShift {
+  0%, 100% { background-position: 0% 0%; }
+  50% { background-position: 100% 100%; }
+}
+@keyframes gridPan {
+  from { background-position: 0 0; }
+  to { background-position: 44px 44px; }
+}
+@keyframes holo {
+  to { background-position: 250% 0; }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+@keyframes spinSlow {
+  to { transform: rotate(360deg); }
+}
+@keyframes glowPulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+@keyframes scanMove {
+  0%, 100% { transform: translateY(-42%); opacity: 0.15; }
+  50% { transform: translateY(42%); opacity: 0.9; }
+}
+@keyframes flicker {
+  0%, 19%, 21%, 23%, 80%, 100% { opacity: 1; }
+  20%, 22% { opacity: 0.35; }
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ===================================================================== */
+/* Scrollbar                                                             */
+/* ===================================================================== */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 9px;
+  height: 9px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--border));
+  background: linear-gradient(hsl(var(--cyan) / 0.5), hsl(var(--primary) / 0.5));
   border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(hsl(var(--cyan) / 0.8), hsl(var(--primary) / 0.8));
 }

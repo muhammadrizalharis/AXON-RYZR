@@ -17,6 +17,7 @@ export function getSocket(token: string): Socket {
     autoConnect: true,
     reconnection: true,
     reconnectionAttempts: 5,
+    extraHeaders: { 'ngrok-skip-browser-warning': 'true' },
   });
 
   return socket;

@@ -9,7 +9,11 @@ import { useAuthStore } from '@/store/auth-store';
 
 export const apiClient: AxiosInstance = axios.create({
   baseURL: env.apiUrl,
-  headers: { 'Content-Type': 'application/json' },
+  headers: {
+    'Content-Type': 'application/json',
+    // Bypass the ngrok free-tier browser interstitial for all API calls.
+    'ngrok-skip-browser-warning': 'true',
+  },
 });
 
 // Attach the access token to every request.
@@ -69,6 +73,7 @@ apiClient.interceptors.response.use(
       const { data } = await axios.post<AuthTokens>(
         `${env.apiUrl}/auth/refresh`,
         { refreshToken: store.refreshToken },
+        { headers: { 'ngrok-skip-browser-warning': 'true' } },
       );
       store.setTokens(data.accessToken, data.refreshToken);
       flushQueue(data.accessToken);
