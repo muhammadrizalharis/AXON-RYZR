@@ -1,13 +1,14 @@
 'use client';
 
-import { useState } from 'react';
-import { Images } from 'lucide-react';
+import { Suspense, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { Images, Search } from 'lucide-react';
 import { AssetType } from '@axon-ryzr/shared';
 import { AssetCard } from '@/features/gallery/asset-card';
 import { useGallery } from '@/features/gallery/use-gallery';
+import { useJobs } from '@/features/generation/use-jobs';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { cn, formatBytes } from '@/lib/utils';
 
 type Filter = 'ALL' | AssetType;
 
@@ -17,36 +18,62 @@ const FILTERS: { value: Filter; label: string }[] = [
   { value: AssetType.VIDEO, label: 'Videos' },
 ];
 
-export default function GalleryPage() {
+function GalleryContent() {
+  const searchParams = useSearchParams();
+  const q = (searchParams.get('q') ?? '').toLowerCase();
+
   const [filter, setFilter] = useState<Filter>('ALL');
   const { data, isLoading } = useGallery({
     type: filter === 'ALL' ? undefined : filter,
     take: 48,
   });
+  // Prompt text lives on jobs — map jobId -> prompt for search.
+  const { data: jobsData } = useJobs({ take: 50 });
+  const promptByJob = new Map(
+    (jobsData?.items ?? []).map((j) => [j.id, j.prompt.toLowerCase()]),
+  );
+
+  const items = (data?.items ?? []).filter((a) => {
+    if (!q) return true;
+    const prompt = a.jobId ? promptByJob.get(a.jobId) ?? '' : '';
+    return prompt.includes(q);
+  });
+
+  const totalSize = items.reduce((s, a) => s + Number(a.fileSize || 0), 0);
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
-            <Images className="h-6 w-6 text-primary" />
-            My Gallery
+            <Images className="h-6 w-6 text-cyan" />
+            <span className="holo-text">My Gallery</span>
           </h1>
           <p className="text-sm text-muted-foreground">
-            All your generated images and videos.
+            {items.length} item{items.length === 1 ? '' : 's'} ·{' '}
+            {formatBytes(totalSize)}
+            {q && (
+              <span className="ml-2 inline-flex items-center gap-1 rounded-full border border-cyan/30 bg-cyan/10 px-2 py-0.5 text-[11px] text-cyan">
+                <Search className="h-3 w-3" /> “{q}”
+              </span>
+            )}
           </p>
         </div>
         <div className="flex gap-2">
           {FILTERS.map((f) => (
-            <Button
+            <button
               key={f.value}
-              variant={filter === f.value ? 'default' : 'outline'}
-              size="sm"
+              type="button"
               onClick={() => setFilter(f.value)}
-              className={cn(filter === f.value && 'shadow-none')}
+              className={cn(
+                'rounded-xl border px-4 py-2 text-sm font-medium transition',
+                filter === f.value
+                  ? 'border-cyan/60 bg-cyan/10 text-cyan glow-cyan'
+                  : 'border-border/60 text-muted-foreground hover:border-cyan/40 hover:text-foreground',
+              )}
             >
               {f.label}
-            </Button>
+            </button>
           ))}
         </div>
       </div>
@@ -54,23 +81,33 @@ export default function GalleryPage() {
       {isLoading ? (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {Array.from({ length: 8 }).map((_, i) => (
-            <Skeleton key={i} className="aspect-square rounded-xl" />
+            <Skeleton key={i} className="aspect-square rounded-2xl" />
           ))}
         </div>
-      ) : data && data.items.length > 0 ? (
+      ) : items.length > 0 ? (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {data.items.map((asset) => (
+          {items.map((asset) => (
             <AssetCard key={asset.id} asset={asset} />
           ))}
         </div>
       ) : (
-        <div className="flex h-72 flex-col items-center justify-center rounded-xl border border-dashed border-border text-center">
+        <div className="hud-panel flex h-72 flex-col items-center justify-center rounded-2xl text-center">
           <Images className="mb-2 h-10 w-10 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">
-            Your gallery is empty. Head to the Creation Hub to get started.
+            {q
+              ? `No results for “${q}”.`
+              : 'Your gallery is empty. Head to the Creation Hub to get started.'}
           </p>
         </div>
       )}
     </div>
+  );
+}
+
+export default function GalleryPage() {
+  return (
+    <Suspense fallback={null}>
+      <GalleryContent />
+    </Suspense>
   );
 }

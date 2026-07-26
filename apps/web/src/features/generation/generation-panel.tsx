@@ -23,6 +23,7 @@ import {
   useGenerateImage,
   useGenerateVideo,
 } from '@/features/generation/use-generate';
+import { useDraftStore } from '@/store/draft-store';
 import { cn } from '@/lib/utils';
 
 const ASPECT_OPTIONS: { value: AspectRatio; label: string }[] = [
@@ -57,21 +58,22 @@ const numberCls =
   'h-10 w-full rounded-lg border border-border/60 bg-background/50 px-3 text-sm text-foreground outline-none transition focus:border-cyan/60';
 
 export function GenerationPanel() {
-  const [prompt, setPrompt] = useState('');
+  const prompt = useDraftStore((s) => s.prompt);
+  const setPrompt = useDraftStore((s) => s.setPrompt);
+  const aspectRatio = useDraftStore((s) => s.aspectRatio);
+  const setAspectRatio = useDraftStore((s) => s.setAspectRatio);
+  const style = useDraftStore((s) => s.style);
+  const setStyle = useDraftStore((s) => s.setStyle);
+  const resolution = useDraftStore((s) => s.resolution);
+  const setResolution = useDraftStore((s) => s.setResolution);
+  const duration = useDraftStore((s) => s.duration);
+  const setDuration = useDraftStore((s) => s.setDuration);
+  const fps = useDraftStore((s) => s.fps);
+  const setFps = useDraftStore((s) => s.setFps);
+
   const [negativePrompt, setNegativePrompt] = useState('');
-  const [aspectRatio, setAspectRatio] = useState<AspectRatio>(
-    AspectRatio.LANDSCAPE_16_9,
-  );
-  const [style, setStyle] = useState<GenerationStyle>(
-    GenerationStyle.CINEMATIC,
-  );
-  const [resolution, setResolution] = useState<ImageResolution>(
-    ImageResolution.FHD,
-  );
   const [batchSize, setBatchSize] = useState(1);
   const [imageSteps, setImageSteps] = useState(25);
-  const [duration, setDuration] = useState(2);
-  const [fps, setFps] = useState(8);
   const [videoSteps, setVideoSteps] = useState(20);
   const [advanced, setAdvanced] = useState(false);
   const [model, setModel] = useState<'aura' | 'genesis'>('aura');
@@ -113,7 +115,13 @@ export function GenerationPanel() {
       <textarea
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
-        placeholder="Describe your vision… e.g. A serene mountain landscape at golden hour, ultra detailed"
+        onKeyDown={(e) => {
+          if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            e.preventDefault();
+            submitImage();
+          }
+        }}
+        placeholder="Describe your vision… e.g. A serene mountain landscape at golden hour, ultra detailed  (Ctrl+Enter = Generate Image)"
         className="min-h-[84px] w-full resize-none rounded-xl border border-cyan/20 bg-background/40 p-4 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/60 focus:border-cyan/60 focus:glow-cyan"
       />
 

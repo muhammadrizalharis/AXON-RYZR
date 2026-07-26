@@ -14,6 +14,7 @@ import { GenerationPanel } from '@/features/generation/generation-panel';
 import { JobCard } from '@/features/generation/job-card';
 import { useJobs } from '@/features/generation/use-jobs';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useDraftStore } from '@/store/draft-store';
 import { cn } from '@/lib/utils';
 
 const PROMPT_LIBRARY = [
@@ -23,24 +24,48 @@ const PROMPT_LIBRARY = [
   'Cozy coffee shop interior, warm bokeh, photorealistic',
 ];
 
-const PRESET_PARAMS = [
-  { label: 'Aspect Ratio', value: '16:9' },
-  { label: 'Style', value: 'Cinematic' },
-  { label: 'Resolution', value: '4K' },
-  { label: 'Duration', value: '15s' },
-  { label: 'FPS', value: '60' },
-];
+const STYLE_LABEL: Record<string, string> = {
+  none: 'None',
+  photorealistic: 'Photorealistic',
+  cinematic: 'Cinematic',
+  anime: 'Anime',
+  'digital-art': 'Digital Art',
+  '3d-render': '3D Render',
+  watercolor: 'Watercolor',
+  neon: 'Neon',
+};
 
 function WorkspacePanel({ jobs }: { jobs: Job[] }) {
+  const aspectRatio = useDraftStore((s) => s.aspectRatio);
+  const style = useDraftStore((s) => s.style);
+  const resolution = useDraftStore((s) => s.resolution);
+  const duration = useDraftStore((s) => s.duration);
+  const fps = useDraftStore((s) => s.fps);
+  const setPrompt = useDraftStore((s) => s.setPrompt);
+
+  const params = [
+    { label: 'Aspect Ratio', value: aspectRatio },
+    { label: 'Style', value: STYLE_LABEL[style] ?? style },
+    { label: 'Resolution', value: resolution },
+    { label: 'Duration', value: `${duration}s` },
+    { label: 'FPS', value: String(fps) },
+  ];
+
   const history = jobs.slice(0, 6);
+  const usePromptCls =
+    'block w-full truncate rounded-md border border-border/50 bg-background/40 px-2 py-1.5 text-left text-xs text-muted-foreground transition hover:border-cyan/50 hover:text-foreground';
+
   return (
     <aside className="space-y-4">
       <div className="hud-panel rounded-2xl p-4">
         <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
           <SlidersHorizontal className="h-4 w-4 text-cyan" /> Parameters
+          <span className="ml-auto text-[9px] uppercase tracking-widest text-cyan/70">
+            live
+          </span>
         </h3>
         <ul className="space-y-2">
-          {PRESET_PARAMS.map((p) => (
+          {params.map((p) => (
             <li
               key={p.label}
               className="flex items-center justify-between text-xs"
@@ -57,16 +82,22 @@ function WorkspacePanel({ jobs }: { jobs: Job[] }) {
       <div className="hud-panel rounded-2xl p-4">
         <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
           <History className="h-4 w-4 text-cyan" /> History
+          <span className="ml-auto text-[9px] uppercase tracking-widest text-muted-foreground">
+            click to reuse
+          </span>
         </h3>
         {history.length ? (
           <ul className="space-y-2">
             {history.map((j) => (
-              <li
-                key={j.id}
-                title={j.prompt}
-                className="line-clamp-1 rounded-md border border-border/50 bg-background/40 px-2 py-1.5 text-xs text-muted-foreground"
-              >
-                {j.prompt}
+              <li key={j.id}>
+                <button
+                  type="button"
+                  title={j.prompt}
+                  onClick={() => setPrompt(j.prompt)}
+                  className={usePromptCls}
+                >
+                  {j.prompt}
+                </button>
               </li>
             ))}
           </ul>
@@ -78,14 +109,21 @@ function WorkspacePanel({ jobs }: { jobs: Job[] }) {
       <div className="hud-panel rounded-2xl p-4">
         <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
           <Library className="h-4 w-4 text-cyan" /> Prompts Library
+          <span className="ml-auto text-[9px] uppercase tracking-widest text-muted-foreground">
+            click to use
+          </span>
         </h3>
         <ul className="space-y-2">
           {PROMPT_LIBRARY.map((p) => (
-            <li
-              key={p}
-              className="line-clamp-2 rounded-md border border-border/50 bg-background/40 px-2 py-1.5 text-xs text-muted-foreground"
-            >
-              {p}
+            <li key={p}>
+              <button
+                type="button"
+                title={p}
+                onClick={() => setPrompt(p)}
+                className={cn(usePromptCls, 'whitespace-normal line-clamp-2')}
+              >
+                {p}
+              </button>
             </li>
           ))}
         </ul>

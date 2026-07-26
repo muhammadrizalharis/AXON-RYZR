@@ -3,7 +3,7 @@
 import { LogOut, User as UserIcon, Server, ShieldCheck } from 'lucide-react';
 import { useCurrentUser, useLogout } from '@/features/auth/use-auth';
 import { useAuthStore } from '@/store/auth-store';
-import { env } from '@/lib/env';
+import { isAdminRole } from '@/components/layout/nav-items';
 
 function Field({ label, value }: { label: string; value?: string | null }) {
   return (
@@ -44,10 +44,16 @@ export default function SettingsPage() {
         <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-foreground">
           <Server className="h-4 w-4 text-cyan" /> System
         </h2>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="API Endpoint" value={env.apiUrl} />
-          <Field label="Realtime Gateway" value={env.socketUrl} />
-        </div>
+        {isAdminRole(u?.role) ? (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="API Endpoint" value="Configured — see API page" />
+            <Field label="Realtime Gateway" value="Configured · Socket.IO" />
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            System endpoints are managed by the administrator.
+          </p>
+        )}
       </section>
 
       <section className="hud-panel rounded-2xl p-6">
