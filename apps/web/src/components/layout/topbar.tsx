@@ -32,6 +32,7 @@ import { useCurrentUser, useLogout } from '@/features/auth/use-auth';
 import { useJobs } from '@/features/generation/use-jobs';
 import { useAuthStore } from '@/store/auth-store';
 import { useUiStore } from '@/store/ui-store';
+import { SystemPulse } from '@/components/fx/system-pulse';
 import { cn, formatBytes, formatRelativeTime } from '@/lib/utils';
 
 function statusIcon(status: Job['status']) {
@@ -152,12 +153,16 @@ export function Topbar() {
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search creations…  (Enter)"
-          className="h-10 w-full rounded-xl border border-border/60 bg-card/40 pl-10 pr-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/60 focus:border-cyan/60 focus:glow-cyan"
+          placeholder="Search creations…"
+          className="h-10 w-full rounded-xl border border-border/60 bg-card/40 pl-10 pr-16 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/60 focus:border-cyan/60 focus:glow-cyan"
         />
+        <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded border border-border/60 bg-background/60 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+          Ctrl K
+        </kbd>
       </form>
 
       <div className="ml-auto flex items-center gap-2">
+        <SystemPulse />
         <span className="hidden items-center gap-1.5 rounded-full border border-cyan/30 bg-cyan/10 px-3 py-1.5 text-xs font-semibold text-cyan sm:flex">
           <Coins className="h-3.5 w-3.5" />
           {user?.credits ?? 0}

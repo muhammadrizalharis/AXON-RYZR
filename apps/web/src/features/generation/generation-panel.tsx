@@ -1,11 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Loader2,
   Image as ImageIcon,
   Film,
   SlidersHorizontal,
+  Sparkles,
+  Dices,
+  Mic,
+  MicOff,
 } from 'lucide-react';
 import {
   AspectRatio,
@@ -57,6 +61,32 @@ const labelCls =
 const numberCls =
   'h-10 w-full rounded-lg border border-border/60 bg-background/50 px-3 text-sm text-foreground outline-none transition focus:border-cyan/60';
 
+const STYLE_BOOSTERS: Record<string, string> = {
+  none: 'highly detailed, sharp focus, professional quality',
+  photorealistic:
+    'photorealistic, ultra detailed, 8k, natural lighting, sharp focus',
+  cinematic:
+    'cinematic lighting, dramatic atmosphere, film grain, depth of field',
+  anime: 'anime style, vibrant colors, clean lineart, studio quality',
+  'digital-art':
+    'digital art, intricate details, vivid colors, concept art quality',
+  '3d-render': '3d render, octane render, global illumination, ray tracing',
+  watercolor:
+    'watercolor painting, soft washes, textured paper, delicate brushwork',
+  neon: 'neon glow, cyberpunk palette, volumetric light, wet reflections',
+};
+
+const SURPRISE_PROMPTS = [
+  'A crystalline dragon soaring over a neon metropolis at midnight, volumetric fog',
+  'Ancient library inside a giant tree, floating books, god rays, magical dust',
+  'Astronaut discovering a glowing alien garden, bioluminescent plants, wide shot',
+  'Steampunk airship docking at a cloud city during golden hour',
+  'Underwater temple ruins with schools of luminous fish, sun shafts',
+  'Cyberpunk samurai standing in rain, neon signs reflecting on katana',
+  'Cozy mountain cabin under aurora borealis, long exposure night sky',
+  'Portrait of a robot artist painting a self-portrait, dramatic studio light',
+];
+
 export function GenerationPanel() {
   const prompt = useDraftStore((s) => s.prompt);
   const setPrompt = useDraftStore((s) => s.setPrompt);
@@ -77,6 +107,61 @@ export function GenerationPanel() {
   const [videoSteps, setVideoSteps] = useState(20);
   const [advanced, setAdvanced] = useState(false);
   const [model, setModel] = useState<'aura' | 'genesis'>('aura');
+  const [listening, setListening] = useState(false);
+  const [voiceSupported, setVoiceSupported] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recRef = useRef<any>(null);
+
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const w = window as any;
+    setVoiceSupported(Boolean(w.SpeechRecognition || w.webkitSpeechRecognition));
+    return () => recRef.current?.stop?.();
+  }, []);
+
+  const enhancePrompt = () => {
+    const boost = STYLE_BOOSTERS[style] ?? STYLE_BOOSTERS.none;
+    const lower = prompt.toLowerCase();
+    const parts = boost.split(', ').filter((b) => !lower.includes(b));
+    if (!prompt.trim() || parts.length === 0) return;
+    setPrompt(`${prompt.trim().replace(/,\s*$/, '')}, ${parts.join(', ')}`);
+  };
+
+  const surpriseMe = () => {
+    setPrompt(
+      SURPRISE_PROMPTS[Math.floor(Math.random() * SURPRISE_PROMPTS.length)],
+    );
+  };
+
+  const toggleVoice = () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const w = window as any;
+    const SR = w.SpeechRecognition || w.webkitSpeechRecognition;
+    if (!SR) return;
+    if (listening) {
+      recRef.current?.stop?.();
+      return;
+    }
+    const rec = new SR();
+    rec.lang = 'id-ID';
+    rec.interimResults = false;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    rec.onresult = (e: any) => {
+      const t = Array.from(e.results)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .map((r: any) => r[0].transcript)
+        .join(' ')
+        .trim();
+      if (!t) return;
+      const cur = useDraftStore.getState().prompt;
+      useDraftStore.getState().setPrompt(cur ? `${cur} ${t}` : t);
+    };
+    rec.onend = () => setListening(false);
+    rec.onerror = () => setListening(false);
+    recRef.current = rec;
+    setListening(true);
+    rec.start();
+  };
 
   const generateImage = useGenerateImage();
   const generateVideo = useGenerateVideo();
@@ -124,6 +209,50 @@ export function GenerationPanel() {
         placeholder="Describe your vision… e.g. A serene mountain landscape at golden hour, ultra detailed  (Ctrl+Enter = Generate Image)"
         className="min-h-[84px] w-full resize-none rounded-xl border border-cyan/20 bg-background/40 p-4 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/60 focus:border-cyan/60 focus:glow-cyan"
       />
+
+      {/* AI toolbar */}
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={enhancePrompt}
+          disabled={!prompt.trim()}
+          title="Perkaya prompt sesuai style terpilih"
+          className="flex items-center gap-1.5 rounded-lg border border-cyan/30 bg-cyan/5 px-2.5 py-1.5 text-xs font-medium text-cyan transition hover:bg-cyan/15 disabled:opacity-40"
+        >
+          <Sparkles className="h-3.5 w-3.5" /> Enhance
+        </button>
+        <button
+          type="button"
+          onClick={surpriseMe}
+          title="Prompt acak"
+          className="flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/5 px-2.5 py-1.5 text-xs font-medium text-primary transition hover:bg-primary/15"
+        >
+          <Dices className="h-3.5 w-3.5" /> Surprise
+        </button>
+        {voiceSupported && (
+          <button
+            type="button"
+            onClick={toggleVoice}
+            title={listening ? 'Berhenti mendengarkan' : 'Diktekan prompt (suara)'}
+            className={cn(
+              'flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition',
+              listening
+                ? 'animate-ring-pulse border-red-500/50 bg-red-500/10 text-red-400'
+                : 'border-accent/30 bg-accent/5 text-accent hover:bg-accent/15',
+            )}
+          >
+            {listening ? (
+              <MicOff className="h-3.5 w-3.5" />
+            ) : (
+              <Mic className="h-3.5 w-3.5" />
+            )}
+            {listening ? 'Listening…' : 'Voice'}
+          </button>
+        )}
+        <span className="ml-auto font-mono text-[10px] tracking-wider text-muted-foreground">
+          {prompt.length} chars · ≈ {batchSize} credit{batchSize > 1 ? 's' : ''}
+        </span>
+      </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <div className="w-44">

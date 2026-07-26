@@ -26,6 +26,14 @@ export default function DashboardPage() {
   const jobs = data?.items ?? [];
   const total = data?.total ?? 0;
   const completed = jobs.filter((j) => j.status === 'COMPLETED').length;
+  const failed = jobs.filter((j) => j.status === 'FAILED').length;
+  const active = jobs.filter(
+    (j) => j.status === 'QUEUED' || j.status === 'RENDERING',
+  ).length;
+  const successRate =
+    completed + failed > 0
+      ? Math.round((completed / (completed + failed)) * 100)
+      : 100;
 
   const stats = [
     {
@@ -81,6 +89,16 @@ export default function DashboardPage() {
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
+      </div>
+
+      <div className="hud-panel rounded-2xl p-4">
+        <p className="flex items-center gap-2 font-mono text-xs leading-relaxed text-cyan/85">
+          <span className="h-2 w-2 shrink-0 animate-ring-pulse rounded-full bg-cyan" />
+          <Typewriter
+            text={`> NEURAL ANALYSIS: ${total} render tercatat · success rate ${successRate}% · ${active} aktif · grid GPU siap menerima perintah_`}
+            speed={16}
+          />
+        </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

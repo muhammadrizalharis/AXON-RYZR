@@ -23,6 +23,8 @@ import {
   CircuitTrace,
   Corners,
 } from '@/components/fx/decor';
+import { Typewriter } from '@/components/fx/animated';
+import { cn } from '@/lib/utils';
 
 const schema = z.object({
   email: z.string().email('Masukkan email yang valid'),
@@ -34,11 +36,22 @@ type FormValues = z.infer<typeof schema>;
 export default function LoginPage() {
   const login = useLogin();
   const [showPassword, setShowPassword] = useState(false);
+  const [tilt, setTilt] = useState({ x: 0, y: 0 });
+  const [shaking, setShaking] = useState(false);
+  const [capsOn, setCapsOn] = useState(false);
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
+
+  const onSubmit = (v: FormValues) =>
+    login.mutate(v, {
+      onError: () => {
+        setShaking(true);
+        setTimeout(() => setShaking(false), 550);
+      },
+    });
 
   return (
     <div className="relative mx-auto w-full max-w-6xl animate-fade-in">
@@ -74,15 +87,34 @@ export default function LoginPage() {
         </aside>
 
         {/* ── CENTER · SUPER ADMIN ACCESS ─────────────────────────── */}
-        <div className="hud-panel relative rounded-3xl p-6 shadow-[0_0_70px_hsl(var(--primary)/0.28)] sm:p-8">
+        <div
+          onMouseMove={(e) => {
+            const r = e.currentTarget.getBoundingClientRect();
+            const px = (e.clientX - r.left) / r.width - 0.5;
+            const py = (e.clientY - r.top) / r.height - 0.5;
+            setTilt({ x: py * -5, y: px * 7 });
+          }}
+          onMouseLeave={() => setTilt({ x: 0, y: 0 })}
+          style={{
+            transform: `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
+            transition: 'transform 0.15s ease-out',
+          }}
+          className={cn(
+            'hud-panel relative rounded-3xl p-6 shadow-[0_0_70px_hsl(var(--primary)/0.28)] sm:p-8',
+            shaking && 'animate-shake',
+          )}
+        >
           <h1 className="flex items-center justify-center gap-3 text-center font-display text-2xl font-bold tracking-wide text-white sm:text-3xl">
             Super Admin Access
             <Lock className="h-5 w-5 neon-magenta" />
           </h1>
+          <p className="mt-2 text-center font-mono text-[10px] tracking-[0.2em] text-cyan/70">
+            <Typewriter text="> AUTHENTICATION MATRIX READY — AWAITING CREDENTIALS_" speed={22} />
+          </p>
 
           <form
-            onSubmit={handleSubmit((v) => login.mutate(v))}
-            className="mt-7 space-y-5"
+            onSubmit={handleSubmit(onSubmit)}
+            className="mt-6 space-y-5"
           >
             {/* email */}
             <div>
@@ -116,6 +148,9 @@ export default function LoginPage() {
                     type={showPassword ? 'text' : 'password'}
                     autoComplete="current-password"
                     placeholder="Security Password"
+                    onKeyUp={(e) =>
+                      setCapsOn(e.getModifierState?.('CapsLock') ?? false)
+                    }
                     className="h-full min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:tracking-wider placeholder:text-muted-foreground/70"
                     {...register('password')}
                   />
@@ -137,6 +172,11 @@ export default function LoginPage() {
               {errors.password && (
                 <p className="mt-1 text-xs text-destructive">
                   {errors.password.message}
+                </p>
+              )}
+              {capsOn && (
+                <p className="mt-1 font-mono text-[10px] uppercase tracking-widest text-amber-400">
+                  ⚠ Caps Lock aktif
                 </p>
               )}
             </div>

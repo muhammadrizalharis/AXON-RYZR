@@ -7,6 +7,7 @@ import { Topbar } from '@/components/layout/topbar';
 import { useAuthStore } from '@/store/auth-store';
 import { useJobUpdates } from '@/features/realtime/use-job-updates';
 import { Particles } from '@/components/fx/decor';
+import { CommandPalette } from '@/components/fx/command-palette';
 
 export default function AppLayout({
   children,
@@ -44,6 +45,7 @@ export default function AppLayout({
       <Particles count={12} />
       <Sidebar />
       <MobileNav />
+      <CommandPalette />
       <div className="relative z-10 flex min-w-0 flex-1 flex-col">
         <Topbar />
         <main className="flex-1 overflow-y-auto p-4 md:p-6">
