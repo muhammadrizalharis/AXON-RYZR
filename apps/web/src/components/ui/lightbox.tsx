@@ -1,22 +1,33 @@
 'use client';
 
-import { useEffect } from 'react';
-import { X, Download } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { X, Download, Loader2 } from 'lucide-react';
+import { downloadFile } from '@/lib/download';
 
 /**
- * Minimal full-screen media lightbox (no portal deps).
+ * Minimal full-screen media lightbox.
+ * Rendered through a portal to <body> so ancestor transforms (page fade)
+ * can never trap the fixed overlay inside the scroll container.
  */
 export function Lightbox({
   src,
   type,
   alt,
+  filename,
   onClose,
 }: {
   src: string;
   type: 'IMAGE' | 'VIDEO';
   alt?: string;
+  filename?: string;
   onClose: () => void;
 }) {
+  const [mounted, setMounted] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+
+  useEffect(() => setMounted(true), []);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -29,13 +40,21 @@ export function Lightbox({
     };
   }, [onClose]);
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+  if (!mounted) return null;
+
+  const handleDownload = async () => {
+    setDownloading(true);
+    await downloadFile(src, filename);
+    setDownloading(false);
+  };
+
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto p-4">
       <button
         type="button"
         aria-label="Close preview"
         onClick={onClose}
-        className="absolute inset-0 bg-background/85 backdrop-blur-md"
+        className="fixed inset-0 bg-background/85 backdrop-blur-md"
       />
       <div className="animate-fade-in relative z-10 max-h-[90vh] max-w-[92vw]">
         {type === 'VIDEO' ? (
@@ -55,16 +74,19 @@ export function Lightbox({
           />
         )}
         <div className="absolute -top-3 right-0 flex -translate-y-full gap-2">
-          <a
-            href={src}
-            download
-            target="_blank"
-            rel="noreferrer"
+          <button
+            type="button"
             title="Download"
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan/40 bg-card/80 text-cyan backdrop-blur transition hover:bg-cyan/10"
+            onClick={handleDownload}
+            disabled={downloading}
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan/40 bg-card/80 text-cyan backdrop-blur transition hover:bg-cyan/10 disabled:opacity-60"
           >
-            <Download className="h-4 w-4" />
-          </a>
+            {downloading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )}
+          </button>
           <button
             type="button"
             title="Close (Esc)"
@@ -75,6 +97,7 @@ export function Lightbox({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

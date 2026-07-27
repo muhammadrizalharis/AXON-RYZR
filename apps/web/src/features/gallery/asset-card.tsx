@@ -5,6 +5,7 @@ import { Download, Trash2, Play, Maximize2 } from 'lucide-react';
 import type { Asset } from '@axon-ryzr/shared';
 import { Lightbox } from '@/components/ui/lightbox';
 import { useDeleteAsset } from '@/features/gallery/use-gallery';
+import { downloadFile, extFromMime } from '@/lib/download';
 import { formatBytes, formatRelativeTime } from '@/lib/utils';
 
 export function AssetCard({ asset }: { asset: Asset }) {
@@ -14,6 +15,7 @@ export function AssetCard({ asset }: { asset: Asset }) {
 
   const resLabel =
     asset.width && asset.height ? `${asset.width}×${asset.height}` : null;
+  const filename = `axon-${asset.id.slice(0, 8)}.${extFromMime(asset.mimeType)}`;
 
   return (
     <>
@@ -57,16 +59,14 @@ export function AssetCard({ asset }: { asset: Asset }) {
             <p>{formatBytes(asset.fileSize)}</p>
           </div>
           <div className="flex gap-1">
-            <a
-              href={asset.url}
-              download
-              target="_blank"
-              rel="noreferrer"
+            <button
+              type="button"
               title="Download"
+              onClick={() => downloadFile(asset.url, filename)}
               className="flex h-8 w-8 items-center justify-center rounded-lg border border-border/60 text-muted-foreground transition hover:border-cyan/50 hover:text-cyan"
             >
               <Download className="h-3.5 w-3.5" />
-            </a>
+            </button>
             {confirmDelete ? (
               <button
                 type="button"
@@ -96,6 +96,7 @@ export function AssetCard({ asset }: { asset: Asset }) {
         <Lightbox
           src={asset.url}
           type={asset.type}
+          filename={filename}
           onClose={() => setPreview(false)}
         />
       )}

@@ -5,6 +5,7 @@ import { Download, Loader2, XCircle, Play, Maximize2 } from 'lucide-react';
 import type { Job } from '@axon-ryzr/shared';
 import { Lightbox } from '@/components/ui/lightbox';
 import { useCancelJob } from '@/features/generation/use-jobs';
+import { downloadFile, extFromMime } from '@/lib/download';
 import { cn, formatRelativeTime } from '@/lib/utils';
 
 const STATUS_CLS: Record<Job['status'], string> = {
@@ -116,16 +117,19 @@ export function JobCard({ job }: { job: Job }) {
             </span>
             <div className="flex gap-1">
               {done && (
-                <a
-                  href={asset.url}
-                  download
-                  target="_blank"
-                  rel="noreferrer"
+                <button
+                  type="button"
                   title="Download"
+                  onClick={() =>
+                    downloadFile(
+                      asset.url,
+                      `axon-${job.id.slice(0, 8)}.${extFromMime(asset.mimeType)}`,
+                    )
+                  }
                   className="flex h-7 w-7 items-center justify-center rounded-lg border border-border/60 text-muted-foreground transition hover:border-cyan/50 hover:text-cyan"
                 >
                   <Download className="h-3.5 w-3.5" />
-                </a>
+                </button>
               )}
               {isActive && (
                 <button
@@ -147,6 +151,7 @@ export function JobCard({ job }: { job: Job }) {
           src={asset.url}
           type={job.type}
           alt={job.prompt}
+          filename={`axon-${job.id.slice(0, 8)}.${extFromMime(asset.mimeType)}`}
           onClose={() => setPreview(false)}
         />
       )}
