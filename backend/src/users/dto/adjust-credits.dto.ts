@@ -1,8 +1,9 @@
-import { IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import { IsInt, IsOptional, IsString, MaxLength, NotEquals } from 'class-validator';
 
 export class AdjustCreditsDto {
+  /** Positive = grant, negative = deduct (balance can never go below zero). */
   @IsInt()
-  @Min(1)
+  @NotEquals(0)
   amount!: number;
 
   @IsOptional()

@@ -8,6 +8,7 @@ import {
   Code2,
   Settings,
   User,
+  UserCog,
 } from 'lucide-react';
 
 export type NavItem = {
@@ -28,6 +29,7 @@ export const NAV_MAIN: NavItem[] = [
 ];
 
 export const NAV_SYSTEM: NavItem[] = [
+  { href: '/users', label: 'Users', icon: UserCog, adminOnly: true },
   { href: '/settings', label: 'Settings', icon: Settings },
   { href: '/profile', label: 'Profile', icon: User },
 ];

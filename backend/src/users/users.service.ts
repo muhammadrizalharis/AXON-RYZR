@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -116,11 +117,19 @@ export class UsersService {
   }
 
   async grantCredits(userId: string, amount: number, reason?: string) {
+    if (!Number.isInteger(amount) || amount === 0) {
+      throw new BadRequestException('Amount must be a non-zero integer');
+    }
     const target = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true },
+      select: { id: true, credits: true },
     });
     if (!target) throw new NotFoundException('User not found');
+    if (target.credits + amount < 0) {
+      throw new BadRequestException(
+        `Balance cannot go below zero (current: ${target.credits})`,
+      );
+    }
 
     return this.prisma.$transaction(async (tx) => {
       const updated = await tx.user.update({
@@ -131,10 +140,10 @@ export class UsersService {
       await tx.creditTransaction.create({
         data: {
           userId,
-          type: CreditTxnType.GRANT,
+          type: amount > 0 ? CreditTxnType.GRANT : CreditTxnType.DEBIT,
           amount,
           balance: updated.credits,
-          reason: reason ?? 'Admin grant',
+          reason: reason ?? (amount > 0 ? 'Admin grant' : 'Admin deduction'),
         },
       });
       return { ...updated, storageUsed: updated.storageUsed.toString() };
@@ -179,15 +188,27 @@ export class UsersService {
 
   // ── Admin operations ──────────────────────────
 
-  async listUsers(skip = 0, take = 20) {
+  async listUsers(skip = 0, take = 20, q?: string) {
+    const where: Prisma.UserWhereInput = q
+      ? {
+          OR: [
+            { name: { contains: q, mode: 'insensitive' } },
+            { email: { contains: q, mode: 'insensitive' } },
+          ],
+        }
+      : {};
     const [items, total] = await this.prisma.$transaction([
       this.prisma.user.findMany({
+        where,
         skip,
         take: Math.min(take, 100),
         orderBy: { createdAt: 'desc' },
-        select: SAFE_USER_SELECT,
+        select: {
+          ...SAFE_USER_SELECT,
+          _count: { select: { jobs: true, assets: true } },
+        },
       }),
-      this.prisma.user.count(),
+      this.prisma.user.count({ where }),
     ]);
     return {
       items: items.map((u) => ({
@@ -200,21 +221,96 @@ export class UsersService {
     };
   }
 
-  async setActive(userId: string, isActive: boolean) {
+  /** Guard shared by admin mutations: protects self & SUPER_ADMIN targets. */
+  private async assertCanManage(
+    caller: { id: string; role: Role },
+    targetId: string,
+    action: 'status' | 'role' | 'credits',
+  ) {
+    const target = await this.prisma.user.findUnique({
+      where: { id: targetId },
+      select: { id: true, role: true },
+    });
+    if (!target) throw new NotFoundException('User not found');
+
+    if (action !== 'credits' && caller.id === targetId) {
+      throw new ForbiddenException(
+        'You cannot change your own account status or role',
+      );
+    }
+    if (
+      target.role === Role.SUPER_ADMIN &&
+      caller.role !== Role.SUPER_ADMIN
+    ) {
+      throw new ForbiddenException('Only a super admin can manage a super admin');
+    }
+    return target;
+  }
+
+  async setActive(
+    caller: { id: string; role: Role },
+    userId: string,
+    isActive: boolean,
+  ) {
+    await this.assertCanManage(caller, userId, 'status');
     const user = await this.prisma.user.update({
       where: { id: userId },
       data: { isActive },
       select: SAFE_USER_SELECT,
     });
+    // Disabled users lose every session immediately.
+    if (!isActive) {
+      await this.prisma.refreshToken.updateMany({
+        where: { userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+    }
     return { ...user, storageUsed: user.storageUsed.toString() };
   }
 
-  async setRole(userId: string, role: Role) {
+  async setRole(
+    caller: { id: string; role: Role },
+    userId: string,
+    role: Role,
+  ) {
+    if (!Object.values(Role).includes(role)) {
+      throw new BadRequestException(`Invalid role: ${String(role)}`);
+    }
+    if (role === Role.SUPER_ADMIN) {
+      throw new BadRequestException(
+        'SUPER_ADMIN cannot be assigned through the API',
+      );
+    }
+    await this.assertCanManage(caller, userId, 'role');
     const user = await this.prisma.user.update({
       where: { id: userId },
       data: { role },
       select: SAFE_USER_SELECT,
     });
     return { ...user, storageUsed: user.storageUsed.toString() };
+  }
+
+  // ── Runtime system settings (singleton row id=1) ──
+
+  async getSettings() {
+    const row = await this.prisma.systemSetting.findUnique({ where: { id: 1 } });
+    return {
+      defaultUserCredits: row?.defaultUserCredits ?? this.quota.defaultUserCredits,
+    };
+  }
+
+  async updateSettings(data: { defaultUserCredits: number }) {
+    const row = await this.prisma.systemSetting.upsert({
+      where: { id: 1 },
+      create: { id: 1, defaultUserCredits: data.defaultUserCredits },
+      update: { defaultUserCredits: data.defaultUserCredits },
+    });
+    return { defaultUserCredits: row.defaultUserCredits };
+  }
+
+  /** Effective credits for a brand-new user (DB setting, else env default). */
+  async defaultCreditsForNewUser(): Promise<number> {
+    const row = await this.prisma.systemSetting.findUnique({ where: { id: 1 } });
+    return row?.defaultUserCredits ?? this.quota.defaultUserCredits;
   }
 }

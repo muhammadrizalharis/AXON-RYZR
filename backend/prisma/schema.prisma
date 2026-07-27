@@ -190,3 +190,12 @@ model CreditTransaction {
   @@index([userId])
   @@map("credit_transactions")
 }
+
+// Singleton runtime settings editable by admins (id is always 1).
+model SystemSetting {
+  id                 Int      @id @default(1)
+  defaultUserCredits Int      @default(100)
+  updatedAt          DateTime @updatedAt
+
+  @@map("system_settings")
+}

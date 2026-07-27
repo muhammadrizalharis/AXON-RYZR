@@ -53,12 +53,20 @@ export class AuthService {
       type: argon2.argon2id,
     });
 
+    // Default credits are runtime-configurable by admins (system_settings),
+    // falling back to the env-based quota default.
+    const setting = await this.prisma.systemSetting.findUnique({
+      where: { id: 1 },
+    });
+    const startingCredits =
+      setting?.defaultUserCredits ?? this.quotaConfig.defaultUserCredits;
+
     const user = await this.prisma.user.create({
       data: {
         email: dto.email.toLowerCase(),
         name: dto.name,
         passwordHash,
-        credits: this.quotaConfig.defaultUserCredits,
+        credits: startingCredits,
         role: Role.USER,
       },
     });

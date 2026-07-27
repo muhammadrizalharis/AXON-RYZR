@@ -13,7 +13,11 @@ import { Role } from '@prisma/client';
 import { UsersService } from './users.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { AdjustCreditsDto } from './dto/adjust-credits.dto';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { UpdateSettingsDto } from './dto/update-settings.dto';
+import {
+  CurrentUser,
+  AuthUser,
+} from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
 
@@ -38,8 +42,26 @@ export class UsersController {
   @Get()
   @Roles(Role.ADMIN)
   @UseGuards(RolesGuard)
-  listUsers(@Query('skip') skip = '0', @Query('take') take = '20') {
-    return this.usersService.listUsers(Number(skip), Number(take));
+  listUsers(
+    @Query('skip') skip = '0',
+    @Query('take') take = '20',
+    @Query('q') q?: string,
+  ) {
+    return this.usersService.listUsers(Number(skip), Number(take), q);
+  }
+
+  @Get('admin/settings')
+  @Roles(Role.ADMIN)
+  @UseGuards(RolesGuard)
+  getSettings() {
+    return this.usersService.getSettings();
+  }
+
+  @Patch('admin/settings')
+  @Roles(Role.ADMIN)
+  @UseGuards(RolesGuard)
+  updateSettings(@Body() dto: UpdateSettingsDto) {
+    return this.usersService.updateSettings(dto);
   }
 
   @Patch(':id/credits')
@@ -55,22 +77,44 @@ export class UsersController {
   @Patch(':id/activate')
   @Roles(Role.ADMIN)
   @UseGuards(RolesGuard)
-  activate(@Param('id', ParseUUIDPipe) id: string) {
-    return this.usersService.setActive(id, true);
+  activate(
+    @CurrentUser() caller: AuthUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.usersService.setActive(
+      { id: caller.id, role: caller.role as Role },
+      id,
+      true,
+    );
   }
 
   @Patch(':id/deactivate')
   @Roles(Role.ADMIN)
   @UseGuards(RolesGuard)
-  deactivate(@Param('id', ParseUUIDPipe) id: string) {
-    return this.usersService.setActive(id, false);
+  deactivate(
+    @CurrentUser() caller: AuthUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.usersService.setActive(
+      { id: caller.id, role: caller.role as Role },
+      id,
+      false,
+    );
   }
 
   @Patch(':id/role/:role')
   @Roles(Role.SUPER_ADMIN)
   @UseGuards(RolesGuard)
-  setRole(@Param('id', ParseUUIDPipe) id: string, @Param('role') role: Role) {
-    return this.usersService.setRole(id, role);
+  setRole(
+    @CurrentUser() caller: AuthUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('role') role: Role,
+  ) {
+    return this.usersService.setRole(
+      { id: caller.id, role: caller.role as Role },
+      id,
+      role,
+    );
   }
 
   @Get(':id')
