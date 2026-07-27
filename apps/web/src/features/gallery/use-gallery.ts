@@ -27,9 +27,37 @@ export function useDeleteAsset() {
     mutationFn: (id: string) => galleryApi.remove(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['gallery'] });
+      queryClient.invalidateQueries({ queryKey: ['community'] });
       queryClient.invalidateQueries({ queryKey: ['me'] });
       toast.success('Asset deleted');
     },
     onError: (err) => toast.error(getApiErrorMessage(err, 'Delete failed')),
+  });
+}
+
+export function useShareAsset() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, isPublic }: { id: string; isPublic: boolean }) =>
+      galleryApi.share(id, isPublic),
+    onSuccess: (asset) => {
+      queryClient.invalidateQueries({ queryKey: ['gallery'] });
+      queryClient.invalidateQueries({ queryKey: ['community'] });
+      toast.success(
+        asset.isPublic
+          ? 'Dibagikan ke Community'
+          : 'Disembunyikan dari Community',
+      );
+    },
+    onError: (err) => toast.error(getApiErrorMessage(err, 'Share failed')),
+  });
+}
+
+export function useCommunity(params?: { skip?: number; take?: number }) {
+  const accessToken = useAuthStore((s) => s.accessToken);
+  return useQuery({
+    queryKey: ['community', params ?? {}],
+    queryFn: () => galleryApi.community(params),
+    enabled: !!accessToken,
   });
 }

@@ -3,7 +3,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import type { LoginPayload, RegisterPayload } from '@axon-ryzr/shared';
+import type {
+  ChangePasswordPayload,
+  LoginPayload,
+  RegisterPayload,
+} from '@axon-ryzr/shared';
 import { authApi } from '@/lib/api/auth';
 import { getApiErrorMessage } from '@/lib/api-client';
 import { useAuthStore } from '@/store/auth-store';
@@ -61,6 +65,22 @@ export function useLogout() {
       queryClient.clear();
       router.push('/login');
     },
+  });
+}
+
+export function useChangePassword() {
+  const setTokens = useAuthStore((s) => s.setTokens);
+
+  return useMutation({
+    mutationFn: (payload: ChangePasswordPayload) =>
+      authApi.changePassword(payload),
+    onSuccess: (data) => {
+      // Server revokes every session; adopt the fresh pair so we stay logged in.
+      setTokens(data.tokens.accessToken, data.tokens.refreshToken);
+      toast.success('Password berhasil diganti. Perangkat lain telah keluar.');
+    },
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, 'Gagal mengganti password')),
   });
 }
 

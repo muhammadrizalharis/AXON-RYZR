@@ -94,8 +94,13 @@ export interface Asset {
   width?: number | null;
   height?: number | null;
   duration?: number | null;
+  isPublic: boolean;
   url: string;
   createdAt: string;
+  /** Present on community feed responses. */
+  user?: { name: string } | null;
+  /** Present when the API includes the source job. */
+  job?: { prompt: string; type?: JobType } | null;
 }
 
 export interface Job {
@@ -148,6 +153,11 @@ export interface RegisterPayload {
 export interface LoginPayload {
   email: string;
   password: string;
+}
+
+export interface ChangePasswordPayload {
+  currentPassword: string;
+  newPassword: string;
 }
 
 // ── Generation payloads ──

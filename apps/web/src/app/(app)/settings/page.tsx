@@ -1,7 +1,22 @@
 'use client';
 
-import { LogOut, User as UserIcon, Server, ShieldCheck } from 'lucide-react';
-import { useCurrentUser, useLogout } from '@/features/auth/use-auth';
+import { useState } from 'react';
+import {
+  LogOut,
+  User as UserIcon,
+  Server,
+  ShieldCheck,
+  KeyRound,
+  Loader2,
+  Eye,
+  EyeOff,
+} from 'lucide-react';
+import { toast } from 'sonner';
+import {
+  useCurrentUser,
+  useLogout,
+  useChangePassword,
+} from '@/features/auth/use-auth';
 import { useAuthStore } from '@/store/auth-store';
 import { isAdminRole } from '@/components/layout/nav-items';
 
@@ -13,6 +28,112 @@ function Field({ label, value }: { label: string; value?: string | null }) {
       </p>
       <p className="mt-0.5 truncate text-sm text-foreground">{value ?? '—'}</p>
     </div>
+  );
+}
+
+const pwInputCls =
+  'h-11 w-full rounded-xl border border-cyan/25 bg-background/60 px-3 pr-10 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/60 focus:border-cyan focus:glow-cyan';
+
+function ChangePasswordSection() {
+  const changePassword = useChangePassword();
+  const [current, setCurrent] = useState('');
+  const [next, setNext] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [show, setShow] = useState(false);
+
+  const strongEnough =
+    next.length >= 8 && /[a-z]/.test(next) && /[A-Z]/.test(next) && /\d/.test(next);
+  const canSubmit =
+    current.length > 0 && strongEnough && next === confirm && !changePassword.isPending;
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canSubmit) {
+      if (next !== confirm) toast.error('Konfirmasi password tidak sama');
+      else if (!strongEnough)
+        toast.error('Password baru minimal 8 karakter dengan huruf besar, kecil & angka');
+      return;
+    }
+    changePassword.mutate(
+      { currentPassword: current, newPassword: next },
+      {
+        onSuccess: () => {
+          setCurrent('');
+          setNext('');
+          setConfirm('');
+        },
+      },
+    );
+  };
+
+  return (
+    <section className="hud-panel rounded-2xl p-6">
+      <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold text-foreground">
+        <KeyRound className="h-4 w-4 text-cyan" /> Security — Ganti Password
+      </h2>
+      <p className="mb-4 text-xs text-muted-foreground">
+        Setelah berhasil, semua perangkat lain otomatis keluar. Sesi ini tetap
+        aktif.
+      </p>
+      <form onSubmit={submit} className="grid gap-3 sm:grid-cols-3">
+        <div className="relative">
+          <input
+            type={show ? 'text' : 'password'}
+            value={current}
+            onChange={(e) => setCurrent(e.target.value)}
+            placeholder="Password saat ini"
+            autoComplete="current-password"
+            className={pwInputCls}
+          />
+        </div>
+        <input
+          type={show ? 'text' : 'password'}
+          value={next}
+          onChange={(e) => setNext(e.target.value)}
+          placeholder="Password baru"
+          autoComplete="new-password"
+          className={pwInputCls}
+        />
+        <input
+          type={show ? 'text' : 'password'}
+          value={confirm}
+          onChange={(e) => setConfirm(e.target.value)}
+          placeholder="Ulangi password baru"
+          autoComplete="new-password"
+          className={pwInputCls}
+        />
+        <div className="flex items-center gap-3 sm:col-span-3">
+          <button
+            type="submit"
+            disabled={!canSubmit}
+            className="inline-flex h-11 items-center gap-2 rounded-xl bg-gradient-to-r from-cyan to-primary px-5 text-sm font-semibold text-white glow-cyan transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {changePassword.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <KeyRound className="h-4 w-4" />
+            )}
+            Ganti Password
+          </button>
+          <button
+            type="button"
+            onClick={() => setShow((s) => !s)}
+            className="inline-flex items-center gap-1.5 text-xs text-muted-foreground transition hover:text-foreground"
+          >
+            {show ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+            {show ? 'Sembunyikan' : 'Tampilkan'} password
+          </button>
+          {next && !strongEnough && (
+            <span className="text-[11px] text-amber-400">
+              min 8 karakter · huruf besar + kecil + angka
+            </span>
+          )}
+          {confirm && next !== confirm && (
+            <span className="text-[11px] text-red-400">konfirmasi tidak sama</span>
+          )}
+        </div>
+      </form>
+    </section>
   );
 }
 
@@ -39,6 +160,8 @@ export default function SettingsPage() {
           <Field label="Status" value={u?.isActive ? 'Active' : 'Suspended'} />
         </div>
       </section>
+
+      <ChangePasswordSection />
 
       <section className="hud-panel rounded-2xl p-6">
         <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-foreground">

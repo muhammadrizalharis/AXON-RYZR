@@ -88,4 +88,56 @@ export class GalleryService {
 
     return { deleted: true, id: assetId };
   }
+
+  /** Toggle community visibility for an owned asset. */
+  async setPublic(userId: string, assetId: string, isPublic: boolean) {
+    const asset = await this.prisma.asset.findUnique({
+      where: { id: assetId },
+    });
+    if (!asset) {
+      throw new NotFoundException('Asset not found');
+    }
+    if (asset.userId !== userId) {
+      throw new ForbiddenException('You do not own this asset');
+    }
+
+    const updated = await this.prisma.asset.update({
+      where: { id: assetId },
+      data: { isPublic },
+    });
+    return serializeBigInt({
+      ...updated,
+      url: await this.storage.getUrl(updated.storageKey),
+    });
+  }
+
+  /** Public feed: every asset shared to the community, newest first. */
+  async communityFeed(opts: { skip?: number; take?: number } = {}) {
+    const skip = opts.skip ?? 0;
+    const take = Math.min(opts.take ?? 24, 60);
+    const where: Prisma.AssetWhereInput = { isPublic: true };
+
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.asset.findMany({
+        where,
+        skip,
+        take,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          user: { select: { name: true } },
+          job: { select: { prompt: true } },
+        },
+      }),
+      this.prisma.asset.count({ where }),
+    ]);
+
+    const withUrls = await Promise.all(
+      items.map(async (a) => ({
+        ...a,
+        url: await this.storage.getUrl(a.storageKey),
+      })),
+    );
+
+    return serializeBigInt({ items: withUrls, total, skip, take });
+  }
 }

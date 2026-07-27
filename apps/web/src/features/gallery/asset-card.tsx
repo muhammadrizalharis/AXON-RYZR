@@ -1,15 +1,23 @@
 'use client';
 
 import { useState } from 'react';
-import { Download, Trash2, Play, Maximize2 } from 'lucide-react';
+import {
+  Download,
+  Trash2,
+  Play,
+  Maximize2,
+  Globe,
+  Loader2,
+} from 'lucide-react';
 import type { Asset } from '@axon-ryzr/shared';
 import { Lightbox } from '@/components/ui/lightbox';
-import { useDeleteAsset } from '@/features/gallery/use-gallery';
+import { useDeleteAsset, useShareAsset } from '@/features/gallery/use-gallery';
 import { downloadFile, extFromMime } from '@/lib/download';
-import { formatBytes, formatRelativeTime } from '@/lib/utils';
+import { cn, formatBytes, formatRelativeTime } from '@/lib/utils';
 
 export function AssetCard({ asset }: { asset: Asset }) {
   const del = useDeleteAsset();
+  const share = useShareAsset();
   const [preview, setPreview] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -44,9 +52,16 @@ export function AssetCard({ asset }: { asset: Asset }) {
             />
           )}
 
-          <span className="absolute left-2 top-2 rounded-md border border-cyan/30 bg-background/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-cyan backdrop-blur">
-            {asset.type}
-            {resLabel ? ` · ${resLabel}` : ''}
+          <span className="absolute left-2 top-2 flex gap-1.5">
+            <span className="rounded-md border border-cyan/30 bg-background/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-cyan backdrop-blur">
+              {asset.type}
+              {resLabel ? ` · ${resLabel}` : ''}
+            </span>
+            {asset.isPublic && (
+              <span className="flex items-center gap-1 rounded-md border border-emerald-400/40 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-emerald-300 backdrop-blur">
+                <Globe className="h-3 w-3" /> Public
+              </span>
+            )}
           </span>
           <span className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-md border border-border/60 bg-background/70 text-muted-foreground opacity-0 backdrop-blur transition group-hover:opacity-100">
             <Maximize2 className="h-3.5 w-3.5" />
@@ -59,6 +74,30 @@ export function AssetCard({ asset }: { asset: Asset }) {
             <p>{formatBytes(asset.fileSize)}</p>
           </div>
           <div className="flex gap-1">
+            <button
+              type="button"
+              title={
+                asset.isPublic
+                  ? 'Sembunyikan dari Community'
+                  : 'Bagikan ke Community'
+              }
+              onClick={() =>
+                share.mutate({ id: asset.id, isPublic: !asset.isPublic })
+              }
+              disabled={share.isPending}
+              className={cn(
+                'flex h-8 w-8 items-center justify-center rounded-lg border transition',
+                asset.isPublic
+                  ? 'border-emerald-400/50 bg-emerald-400/10 text-emerald-300 hover:bg-emerald-400/20'
+                  : 'border-border/60 text-muted-foreground hover:border-cyan/50 hover:text-cyan',
+              )}
+            >
+              {share.isPending ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Globe className="h-3.5 w-3.5" />
+              )}
+            </button>
             <button
               type="button"
               title="Download"

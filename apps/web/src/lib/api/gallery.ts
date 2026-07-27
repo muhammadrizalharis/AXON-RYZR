@@ -19,4 +19,14 @@ export const galleryApi = {
     apiClient
       .delete<{ deleted: boolean; id: string }>(`/gallery/${id}`)
       .then((r) => r.data),
+
+  share: (id: string, isPublic: boolean) =>
+    apiClient
+      .patch<Asset>(`/gallery/${id}/share`, { isPublic })
+      .then((r) => r.data),
+
+  community: (params?: { skip?: number; take?: number }) =>
+    apiClient
+      .get<Paginated<Asset>>('/community', { params })
+      .then((r) => r.data),
 };

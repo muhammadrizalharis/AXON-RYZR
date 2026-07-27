@@ -4,6 +4,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Patch,
   Post,
   Req,
   UseGuards,
@@ -15,6 +16,7 @@ import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
 import { Public } from '../common/decorators/public.decorator';
 import {
@@ -70,6 +72,21 @@ export class AuthController {
   @Post('logout')
   async logout(@CurrentUser() user: AuthUser) {
     await this.authService.logout(user.id);
+  }
+
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Patch('password')
+  changePassword(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: ChangePasswordDto,
+    @Req() req: Request,
+  ) {
+    return this.authService.changePassword(
+      user.id,
+      dto.currentPassword,
+      dto.newPassword,
+      this.meta(req),
+    );
   }
 
   @Get('me')

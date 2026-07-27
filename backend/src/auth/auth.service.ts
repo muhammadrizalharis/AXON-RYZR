@@ -145,6 +145,42 @@ export class AuthService {
     }
   }
 
+  /**
+   * Verifies the current password, stores the new Argon2 hash, revokes every
+   * refresh token (logs out other devices), and issues a fresh token pair so
+   * the current session stays alive.
+   */
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+    meta: RequestMeta = {},
+  ): Promise<{ tokens: AuthTokens }> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const valid = await argon2.verify(user.passwordHash, currentPassword);
+    if (!valid) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    const passwordHash = await argon2.hash(newPassword, {
+      type: argon2.argon2id,
+    });
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash },
+    });
+
+    // Kick every other session; caller receives fresh tokens.
+    await this.revokeAllForUser(userId);
+    const tokens = await this.issueTokens(user, meta);
+    this.logger.log(`Password changed for ${user.email}`);
+    return { tokens };
+  }
+
   private async revokeAllForUser(userId: string): Promise<void> {
     await this.prisma.refreshToken.updateMany({
       where: { userId, revokedAt: null },

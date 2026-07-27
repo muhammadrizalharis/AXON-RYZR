@@ -165,10 +165,13 @@ model Asset {
   height   Int?
   duration Float? // seconds (video)
 
+  isPublic Boolean @default(false) // shared to the community feed
+
   createdAt DateTime @default(now())
 
   @@index([userId])
   @@index([jobId])
+  @@index([isPublic, createdAt])
   @@map("assets")
 }
 

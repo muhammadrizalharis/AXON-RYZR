@@ -1,6 +1,7 @@
 import type {
   AuthResponse,
   AuthTokens,
+  ChangePasswordPayload,
   LoginPayload,
   RegisterPayload,
   User,
@@ -20,6 +21,11 @@ export const authApi = {
       .then((r) => r.data),
 
   logout: () => apiClient.post<void>('/auth/logout').then((r) => r.data),
+
+  changePassword: (payload: ChangePasswordPayload) =>
+    apiClient
+      .patch<{ tokens: AuthTokens }>('/auth/password', payload)
+      .then((r) => r.data),
 
   me: () => apiClient.get<User>('/users/me').then((r) => r.data),
 };
