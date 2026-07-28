@@ -1,11 +1,20 @@
 'use client';
 
 import { useState } from 'react';
-import { Download, Loader2, XCircle, Play, Maximize2 } from 'lucide-react';
+import {
+  Download,
+  Loader2,
+  XCircle,
+  Play,
+  Maximize2,
+  RefreshCw,
+} from 'lucide-react';
 import type { Job } from '@axon-ryzr/shared';
 import { Lightbox } from '@/components/ui/lightbox';
 import { useCancelJob } from '@/features/generation/use-jobs';
+import { useRetryJob } from '@/features/generation/use-generate';
 import { downloadFile, extFromMime } from '@/lib/download';
+import { humanizeJobError } from '@/lib/error-humanizer';
 import { cn, formatRelativeTime } from '@/lib/utils';
 
 const STATUS_CLS: Record<Job['status'], string> = {
@@ -18,10 +27,14 @@ const STATUS_CLS: Record<Job['status'], string> = {
 
 export function JobCard({ job }: { job: Job }) {
   const cancel = useCancelJob();
+  const retry = useRetryJob();
   const [preview, setPreview] = useState(false);
   const isActive = job.status === 'QUEUED' || job.status === 'RENDERING';
+  const isFailed = job.status === 'FAILED' || job.status === 'CANCELLED';
   const asset = job.assets?.[0];
   const done = job.status === 'COMPLETED' && asset;
+  const humanError =
+    job.status === 'FAILED' ? humanizeJobError(job.error) : null;
 
   return (
     <>
@@ -55,17 +68,26 @@ export function JobCard({ job }: { job: Job }) {
               />
             )
           ) : (
-            <span className="flex h-full w-full flex-col items-center justify-center gap-3 p-4">
+            <span className="flex h-full w-full flex-col items-center justify-center gap-2 p-4">
               {isActive ? (
                 <Loader2 className="h-8 w-8 animate-spin text-cyan" />
               ) : job.status === 'FAILED' ? (
-                <XCircle className="h-8 w-8 text-red-400" />
+                <XCircle className="h-7 w-7 text-red-400" />
               ) : null}
-              <span className="text-xs text-muted-foreground">
-                {job.status === 'FAILED'
-                  ? job.error || 'Generation failed'
-                  : job.status}
-              </span>
+              {humanError ? (
+                <>
+                  <span className="text-sm font-semibold text-red-400">
+                    {humanError.title}
+                  </span>
+                  <span className="line-clamp-4 text-center text-[11px] leading-relaxed text-muted-foreground">
+                    {humanError.hint}
+                  </span>
+                </>
+              ) : (
+                <span className="text-xs text-muted-foreground">
+                  {job.status}
+                </span>
+              )}
             </span>
           )}
 
@@ -105,6 +127,34 @@ export function JobCard({ job }: { job: Job }) {
               <p className="text-right text-[10px] text-cyan">{job.progress}%</p>
             </div>
           )}
+
+          {isFailed && (
+            <button
+              type="button"
+              onClick={() => retry.mutate(job.id)}
+              disabled={retry.isPending || (humanError ? !humanError.retryable : false)}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan to-primary px-3 py-2 text-xs font-semibold text-white glow-cyan transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {retry.isPending ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3.5 w-3.5" />
+              )}
+              Generate Ulang
+            </button>
+          )}
+
+          {job.status === 'FAILED' && job.error && (
+            <details className="group/err">
+              <summary className="cursor-pointer select-none text-[10px] uppercase tracking-widest text-muted-foreground transition hover:text-foreground">
+                Detail teknis
+              </summary>
+              <p className="mt-1 max-h-24 overflow-y-auto break-all rounded-lg border border-border/50 bg-background/60 p-2 font-mono text-[9px] leading-relaxed text-muted-foreground">
+                {job.error}
+              </p>
+            </details>
+          )}
+
           <p
             className="line-clamp-2 text-xs text-foreground/90"
             title={job.prompt}

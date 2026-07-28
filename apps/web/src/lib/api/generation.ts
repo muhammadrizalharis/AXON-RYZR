@@ -11,4 +11,7 @@ export const generationApi = {
 
   createVideo: (payload: CreateVideoPayload) =>
     apiClient.post<Job>('/generation/video', payload).then((r) => r.data),
+
+  retry: (jobId: string) =>
+    apiClient.post<Job>(`/generation/retry/${jobId}`).then((r) => r.data),
 };

@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Param, ParseUUIDPipe, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { GenerationService } from './generation.service';
@@ -22,5 +22,14 @@ export class GenerationController {
   @Post('video')
   createVideo(@CurrentUser('id') userId: string, @Body() dto: CreateVideoDto) {
     return this.generationService.createVideoJob(userId, dto);
+  }
+
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  @Post('retry/:jobId')
+  retry(
+    @CurrentUser('id') userId: string,
+    @Param('jobId', ParseUUIDPipe) jobId: string,
+  ) {
+    return this.generationService.retryJob(userId, jobId);
   }
 }

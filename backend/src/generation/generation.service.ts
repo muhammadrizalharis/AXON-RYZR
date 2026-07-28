@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   Logger,
   NotFoundException,
@@ -108,6 +109,43 @@ export class GenerationService {
       params,
       cost,
       projectId: dto.projectId,
+    });
+  }
+
+  /**
+   * Re-queues a FAILED/CANCELLED job with its original parameters and a fresh
+   * seed. Credits are debited again (the original failure was refunded).
+   */
+  async retryJob(userId: string, jobId: string) {
+    const job = await this.prisma.job.findUnique({ where: { id: jobId } });
+    if (!job || job.userId !== userId) {
+      throw new NotFoundException('Job not found');
+    }
+    if (job.status !== JobStatus.FAILED && job.status !== JobStatus.CANCELLED) {
+      throw new BadRequestException(
+        'Only failed or cancelled jobs can be retried',
+      );
+    }
+    if (job.type === JobType.VIDEO && !this.videoEnabled) {
+      throw new NotImplementedException(
+        'Text-to-video belum tersedia — job video tidak dapat diulang.',
+      );
+    }
+
+    const params = {
+      ...(job.params as unknown as GenerationParams),
+      seed: this.randomSeed(), // fresh seed so transient artifacts differ
+    };
+
+    return this.createJob({
+      userId,
+      type: job.type,
+      // Stored prompt already includes the style suffix — reuse verbatim.
+      prompt: job.prompt,
+      negativePrompt: job.negativePrompt ?? undefined,
+      params,
+      cost: job.creditsCost,
+      projectId: job.projectId ?? undefined,
     });
   }
 

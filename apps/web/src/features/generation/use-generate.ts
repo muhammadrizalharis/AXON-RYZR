@@ -38,3 +38,17 @@ export function useGenerateVideo() {
       toast.error(getApiErrorMessage(err, 'Failed to queue generation')),
   });
 }
+
+export function useRetryJob() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (jobId: string) => generationApi.retry(jobId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      queryClient.invalidateQueries({ queryKey: ['me'] });
+      toast.success('Job dimasukkan ulang ke antrean render');
+    },
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, 'Gagal mengulang job')),
+  });
+}
