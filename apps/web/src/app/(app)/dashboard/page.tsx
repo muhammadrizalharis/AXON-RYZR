@@ -79,7 +79,7 @@ export default function DashboardPage() {
             {u?.name ?? 'Operator'}
           </h1>
           <p className="mt-1 max-w-lg text-sm text-muted-foreground">
-            <Typewriter text="Your on-premise generative studio is online. Spin up a new image or video render on the campus GPU." />
+            <Typewriter text="Your generative studio is online. Spin up a new image or video render on the neural grid." />
           </p>
           <Link
             href="/create"

@@ -83,7 +83,7 @@ export default function RegisterPage() {
               <input
                 type="email"
                 autoComplete="email"
-                placeholder="you@unismuh.ac.id"
+                placeholder="you@example.com"
                 className="h-12 w-full rounded-xl border border-cyan/25 bg-background/60 pl-10 pr-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/60 focus:border-cyan focus:glow-cyan"
                 {...register('email')}
               />

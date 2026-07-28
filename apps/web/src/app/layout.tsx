@@ -13,7 +13,7 @@ const orbitron = Orbitron({
 export const metadata: Metadata = {
   title: 'AURA Creative Studio — AXON-RYZR',
   description:
-    'Self-hosted generative AI studio for text-to-image and text-to-video. Built for UNISMUH ComputeHub.',
+    'AXON-RYZR — AI creative studio for text-to-image and text-to-video generation.',
   icons: { icon: '/favicon-64.png', apple: '/logo.png' },
 };
 

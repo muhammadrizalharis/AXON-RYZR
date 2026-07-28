@@ -16,7 +16,7 @@ const RULES: Array<{ re: RegExp; out: HumanError }> = [
     re: /vram|out of memory|oom|cuda.*memory|grow failed|allocat/i,
     out: {
       title: 'GPU sedang penuh',
-      hint: 'Memori GPU kampus sedang dipakai proses lain. Tunggu 1–5 menit lalu generate ulang, atau turunkan resolusi/batch.',
+      hint: 'Memori GPU sedang dipakai proses lain. Tunggu 1–5 menit lalu generate ulang, atau turunkan resolusi/batch.',
       retryable: true,
     },
   },

@@ -214,7 +214,7 @@ export default function CreatePage() {
           <span className="holo-text font-display">Creation Hub</span>
         </h1>
         <p className="text-sm text-muted-foreground">
-          Describe your vision and render it on the campus GPU.
+          Describe your vision and let the neural grid render it.
         </p>
       </div>
 
