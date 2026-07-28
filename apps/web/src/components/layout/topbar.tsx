@@ -33,6 +33,7 @@ import { useJobs } from '@/features/generation/use-jobs';
 import { useAuthStore } from '@/store/auth-store';
 import { useUiStore } from '@/store/ui-store';
 import { SystemPulse } from '@/components/fx/system-pulse';
+import { Logo } from '@/components/ui/logo';
 import { cn, formatBytes, formatRelativeTime } from '@/lib/utils';
 
 function statusIcon(status: Job['status']) {
@@ -146,6 +147,10 @@ export function Topbar() {
       >
         <Menu className="h-5 w-5" />
       </button>
+
+      <Link href="/create" className="md:hidden">
+        <Logo className="h-8 w-8" glow={false} />
+      </Link>
 
       <form onSubmit={submitSearch} className="relative hidden max-w-md flex-1 md:block">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

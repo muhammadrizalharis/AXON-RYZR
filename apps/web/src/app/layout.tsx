@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   title: 'AURA Creative Studio — AXON-RYZR',
   description:
     'Self-hosted generative AI studio for text-to-image and text-to-video. Built for UNISMUH ComputeHub.',
-  icons: { icon: '/logo.svg' },
+  icons: { icon: '/favicon-64.png', apple: '/logo.png' },
 };
 
 export const viewport: Viewport = {

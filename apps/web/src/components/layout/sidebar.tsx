@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ChevronsLeft, ChevronsRight, Coins } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Logo } from '@/components/ui/logo';
 import { useCurrentUser } from '@/features/auth/use-auth';
 import { useAuthStore } from '@/store/auth-store';
 import { useUiStore } from '@/store/ui-store';
@@ -84,9 +85,7 @@ export function SidebarNav({
           collapsed && 'justify-center px-2',
         )}
       >
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan to-primary glow-cyan">
-          <span className="text-lg font-black text-white">A</span>
-        </div>
+        <Logo className="h-9 w-9 shrink-0" />
         {!collapsed && (
           <div className="leading-none">
             <p className="text-sm font-black tracking-tight holo-text">AURA</p>

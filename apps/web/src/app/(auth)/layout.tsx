@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
+import { Logo } from '@/components/ui/logo';
 import {
   BinaryRain,
   FloorGrid,
@@ -40,11 +41,7 @@ export default function AuthLayout({
 
         <div className="absolute left-1/2 top-0 -translate-x-1/2">
           <div className="flex items-center gap-3">
-            <div className="animate-glow-pulse flex h-11 w-11 items-center justify-center rounded-full border border-cyan/50 bg-background/60 shadow-[0_0_18px_hsl(var(--cyan)/0.5)]">
-              <span className="font-display text-lg font-black text-white">
-                A
-              </span>
-            </div>
+            <Logo className="animate-glow-pulse h-11 w-11" />
             <div className="text-left leading-none">
               <p className="font-display text-xl font-black tracking-[0.2em] text-white">
                 AURA

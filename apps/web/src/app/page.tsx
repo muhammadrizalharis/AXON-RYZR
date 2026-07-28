@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
+import { Logo } from '@/components/ui/logo';
 import { Particles, FloorGrid, HudRings } from '@/components/fx/decor';
 
 const BOOT_LINES = [
@@ -40,9 +41,7 @@ export default function HomePage() {
       <HudRings className="left-1/2 top-1/2 h-[480px] w-[480px] -translate-x-1/2 -translate-y-1/2 opacity-60" />
 
       <div className="relative z-10 flex items-center gap-3">
-        <div className="animate-glow-pulse flex h-12 w-12 items-center justify-center rounded-full border border-cyan/50 bg-background/60 shadow-[0_0_22px_hsl(var(--cyan)/0.55)]">
-          <span className="font-display text-xl font-black text-white">A</span>
-        </div>
+        <Logo className="animate-glow-pulse h-12 w-12" />
         <div className="leading-none">
           <p className="font-display text-2xl font-black tracking-[0.18em] holo-text">
             AURA
