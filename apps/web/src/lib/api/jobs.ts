@@ -11,4 +11,19 @@ export const jobsApi = {
 
   cancel: (id: string) =>
     apiClient.patch<Job>(`/jobs/${id}/cancel`).then((r) => r.data),
+
+  // ── Admin oversight ──
+
+  listAll: (params?: {
+    status?: JobStatus;
+    q?: string;
+    skip?: number;
+    take?: number;
+  }) =>
+    apiClient
+      .get<Paginated<Job>>('/jobs/admin/all', { params })
+      .then((r) => r.data),
+
+  adminCancel: (id: string) =>
+    apiClient.patch<Job>(`/jobs/admin/${id}/cancel`).then((r) => r.data),
 };

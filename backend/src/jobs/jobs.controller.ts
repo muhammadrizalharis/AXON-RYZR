@@ -5,6 +5,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JobStatus, Role } from '@prisma/client';
@@ -13,6 +14,8 @@ import {
   AuthUser,
   CurrentUser,
 } from '../common/decorators/current-user.decorator';
+import { Roles } from '../common/decorators/roles.decorator';
+import { RolesGuard } from '../common/guards/roles.guard';
 
 @ApiTags('jobs')
 @ApiBearerAuth()
@@ -32,6 +35,32 @@ export class JobsController {
       skip: Number(skip),
       take: Number(take),
     });
+  }
+
+  // ── Admin oversight (declared before :id routes) ──
+
+  @Roles(Role.ADMIN)
+  @UseGuards(RolesGuard)
+  @Get('admin/all')
+  listAll(
+    @Query('status') status?: JobStatus,
+    @Query('q') q?: string,
+    @Query('skip') skip = '0',
+    @Query('take') take = '24',
+  ) {
+    return this.jobsService.listAll({
+      status,
+      q,
+      skip: Number(skip),
+      take: Number(take),
+    });
+  }
+
+  @Roles(Role.ADMIN)
+  @UseGuards(RolesGuard)
+  @Patch('admin/:id/cancel')
+  adminCancel(@Param('id', ParseUUIDPipe) id: string) {
+    return this.jobsService.adminCancel(id);
   }
 
   @Get(':id')

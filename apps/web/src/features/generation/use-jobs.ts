@@ -32,3 +32,33 @@ export function useCancelJob() {
     onError: (err) => toast.error(getApiErrorMessage(err, 'Cancel failed')),
   });
 }
+
+// ── Admin oversight ──
+
+export function useAllJobs(params?: {
+  status?: JobStatus;
+  q?: string;
+  skip?: number;
+  take?: number;
+}) {
+  const accessToken = useAuthStore((s) => s.accessToken);
+  return useQuery({
+    queryKey: ['admin-jobs', params ?? {}],
+    queryFn: () => jobsApi.listAll(params),
+    enabled: !!accessToken,
+    refetchInterval: 10_000, // keep the oversight grid live
+  });
+}
+
+export function useAdminCancelJob() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => jobsApi.adminCancel(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-jobs'] });
+      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      toast.success('Job user dibatalkan — kredit dikembalikan ke pemiliknya');
+    },
+    onError: (err) => toast.error(getApiErrorMessage(err, 'Cancel failed')),
+  });
+}

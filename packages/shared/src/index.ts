@@ -122,6 +122,8 @@ export interface Job {
   assets: Asset[];
   createdAt: string;
   updatedAt: string;
+  /** Present on admin oversight responses. */
+  user?: { id: string; name: string; email: string; role: Role } | null;
 }
 
 export interface Project {

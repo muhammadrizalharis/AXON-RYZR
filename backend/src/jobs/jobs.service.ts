@@ -1,6 +1,6 @@
 import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { JobStatus, Prisma } from '@prisma/client';
+import { JobStatus, JobType, Prisma } from '@prisma/client';
 import { Queue } from 'bullmq';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
@@ -88,6 +88,51 @@ export class JobsService {
   }
 
   /**
+   * Admin overview: every user's generations, newest first, with the owner
+   * attached. `q` filters by owner name/email or prompt text.
+   */
+  async listAll(
+    opts: { status?: JobStatus; q?: string; skip?: number; take?: number } = {},
+  ) {
+    const skip = opts.skip ?? 0;
+    const take = Math.min(opts.take ?? 24, 100);
+    const q = opts.q?.trim();
+    const where: Prisma.JobWhereInput = {
+      ...(opts.status ? { status: opts.status } : {}),
+      ...(q
+        ? {
+            OR: [
+              { prompt: { contains: q, mode: 'insensitive' } },
+              { user: { name: { contains: q, mode: 'insensitive' } } },
+              { user: { email: { contains: q, mode: 'insensitive' } } },
+            ],
+          }
+        : {}),
+    };
+
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.job.findMany({
+        where,
+        skip,
+        take,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          assets: true,
+          user: { select: { id: true, name: true, email: true, role: true } },
+        },
+      }),
+      this.prisma.job.count({ where }),
+    ]);
+
+    return {
+      items: await Promise.all(items.map((j) => this.withAssetUrls(j))),
+      total,
+      skip,
+      take,
+    };
+  }
+
+  /**
    * Cancels a QUEUED or RENDERING job. The status is flipped first (atomic
    * guard against double-refunds), then the BullMQ entry is removed and the
    * ComfyUI prompt is dequeued/interrupted, and finally credits are refunded.
@@ -97,11 +142,36 @@ export class JobsService {
     if (!job || job.userId !== userId) {
       throw new NotFoundException('Job not found');
     }
+    return this.cancelCore(job);
+  }
+
+  /** Admin: cancel any user's job (credits are refunded to the owner). */
+  async adminCancel(jobId: string) {
+    const job = await this.prisma.job.findUnique({ where: { id: jobId } });
+    if (!job) {
+      throw new NotFoundException('Job not found');
+    }
+    return this.cancelCore(job);
+  }
+
+  private async cancelCore(job: {
+    id: string;
+    userId: string;
+    status: JobStatus;
+    creditsCost: number;
+    comfyPromptId: string | null;
+    progress: number;
+    type: JobType;
+  }) {
+    const jobId = job.id;
     if (
       job.status !== JobStatus.QUEUED &&
       job.status !== JobStatus.RENDERING
     ) {
-      return serializeBigInt(job);
+      const current = await this.prisma.job.findUnique({
+        where: { id: jobId },
+      });
+      return serializeBigInt(current);
     }
 
     // Atomic flip — count 0 means someone else already finished/cancelled it.
@@ -133,12 +203,12 @@ export class JobsService {
     }
 
     // Return the credits — the render never delivered.
-    await this.users.refundCredits(userId, job.creditsCost, jobId);
+    await this.users.refundCredits(job.userId, job.creditsCost, jobId);
 
     const cancelled = await this.prisma.job.findUnique({
       where: { id: jobId },
     });
-    this.realtime.emitJobUpdate(userId, {
+    this.realtime.emitJobUpdate(job.userId, {
       jobId,
       status: JobStatus.CANCELLED,
       progress: job.progress,
