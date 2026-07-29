@@ -37,6 +37,10 @@ export interface GenerationParams {
   fps?: number;
   duration?: number;
   motionModule?: string;
+  // audio only
+  seconds?: number;
+  lyrics?: string;
+  lyricsStrength?: number;
   // presentation metadata
   aspectRatio?: string;
   style?: string;

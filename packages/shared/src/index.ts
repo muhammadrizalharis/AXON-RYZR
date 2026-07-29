@@ -15,6 +15,7 @@ export type Role = (typeof Role)[keyof typeof Role];
 export const JobType = {
   IMAGE: 'IMAGE',
   VIDEO: 'VIDEO',
+  AUDIO: 'AUDIO',
 } as const;
 export type JobType = (typeof JobType)[keyof typeof JobType];
 
@@ -30,6 +31,7 @@ export type JobStatus = (typeof JobStatus)[keyof typeof JobStatus];
 export const AssetType = {
   IMAGE: 'IMAGE',
   VIDEO: 'VIDEO',
+  AUDIO: 'AUDIO',
 } as const;
 export type AssetType = (typeof AssetType)[keyof typeof AssetType];
 
@@ -183,6 +185,19 @@ export interface CreateVideoPayload {
   duration?: number;
   fps?: number;
   steps?: number;
+  seed?: number;
+  projectId?: string;
+}
+
+export interface CreateAudioPayload {
+  /** Comma-separated style/genre tags. */
+  prompt: string;
+  /** Optional lyrics; empty = instrumental. */
+  lyrics?: string;
+  /** Track length in seconds (5-180). */
+  duration?: number;
+  steps?: number;
+  lyricsStrength?: number;
   seed?: number;
   projectId?: string;
 }

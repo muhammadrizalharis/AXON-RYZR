@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import type { Asset } from '@axon-ryzr/shared';
 import { Lightbox } from '@/components/ui/lightbox';
+import { AudioTile } from '@/components/ui/audio-tile';
 import { useDeleteAsset, useShareAsset } from '@/features/gallery/use-gallery';
 import { downloadFile, extFromMime } from '@/lib/download';
 import { cn, formatBytes, formatRelativeTime } from '@/lib/utils';
@@ -42,6 +43,8 @@ export function AssetCard({ asset }: { asset: Asset }) {
                 </span>
               </span>
             </>
+          ) : asset.type === 'AUDIO' ? (
+            <AudioTile />
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
             <img

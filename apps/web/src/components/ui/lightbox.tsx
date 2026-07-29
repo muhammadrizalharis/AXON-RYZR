@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Download, Loader2 } from 'lucide-react';
+import { X, Download, Loader2, Music } from 'lucide-react';
 import { downloadFile } from '@/lib/download';
 
 /**
@@ -18,7 +18,7 @@ export function Lightbox({
   onClose,
 }: {
   src: string;
-  type: 'IMAGE' | 'VIDEO';
+  type: 'IMAGE' | 'VIDEO' | 'AUDIO';
   alt?: string;
   filename?: string;
   onClose: () => void;
@@ -65,6 +65,18 @@ export function Lightbox({
             loop
             className="max-h-[85vh] max-w-[92vw] rounded-2xl border border-cyan/30 shadow-[0_0_60px_hsl(var(--cyan)/0.2)]"
           />
+        ) : type === 'AUDIO' ? (
+          <div className="flex w-[min(560px,92vw)] flex-col items-center gap-6 rounded-2xl border border-accent/30 bg-card/80 p-8 shadow-[0_0_60px_hsl(var(--accent)/0.2)] backdrop-blur">
+            <span className="flex h-20 w-20 items-center justify-center rounded-full border border-accent/50 bg-background/60 text-accent">
+              <Music className="h-9 w-9" />
+            </span>
+            {alt && (
+              <p className="line-clamp-3 text-center text-sm text-muted-foreground">
+                {alt}
+              </p>
+            )}
+            <audio src={src} controls autoPlay className="w-full" />
+          </div>
         ) : (
           // eslint-disable-next-line @next/next/no-img-element
           <img

@@ -15,6 +15,7 @@ import { GenerationParams } from '../jobs/jobs.constants';
 import { serializeBigInt } from '../common/utils/serialize';
 import { CreateImageDto } from './dto/create-image.dto';
 import { CreateVideoDto } from './dto/create-video.dto';
+import { CreateAudioDto } from './dto/create-audio.dto';
 import {
   applyStyle,
   AspectRatio,
@@ -28,6 +29,7 @@ export class GenerationService {
   private readonly logger = new Logger(GenerationService.name);
   private readonly quota: QuotaConfig;
   private readonly videoEnabled: boolean;
+  private readonly audioEnabled: boolean;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -36,8 +38,9 @@ export class GenerationService {
     config: ConfigService,
   ) {
     this.quota = config.getOrThrow<QuotaConfig>('quota');
-    this.videoEnabled =
-      config.getOrThrow<ComfyuiConfig>('comfyui').videoEnabled;
+    const comfy = config.getOrThrow<ComfyuiConfig>('comfyui');
+    this.videoEnabled = comfy.videoEnabled;
+    this.audioEnabled = comfy.audioEnabled;
   }
 
   async createImageJob(userId: string, dto: CreateImageDto) {
@@ -79,20 +82,20 @@ export class GenerationService {
       );
     }
     const cost = this.quota.videoCreditCost;
-    const fps = dto.fps ?? 8;
-    const duration = dto.duration ?? 2;
+    const fps = dto.fps ?? 24;
+    const duration = dto.duration ?? 5;
 
     const { width, height } = resolveDimensions(
       dto.aspectRatio ?? AspectRatio.LANDSCAPE_16_9,
       dto.resolution ?? ImageResolution.HD,
-      1024, // tighter cap for video VRAM budget
+      1280, // Wan 2.2 5B native long edge (1280x704)
     );
 
     const params: GenerationParams = {
       width,
       height,
-      steps: dto.steps ?? 20,
-      cfg: 7,
+      steps: dto.steps ?? 25,
+      cfg: 5, // Wan 2.2 reference guidance
       seed: dto.seed ?? this.randomSeed(),
       fps,
       duration,
@@ -106,6 +109,36 @@ export class GenerationService {
       type: JobType.VIDEO,
       prompt: applyStyle(dto.prompt, dto.style ?? GenerationStyle.NONE),
       negativePrompt: dto.negativePrompt,
+      params,
+      cost,
+      projectId: dto.projectId,
+    });
+  }
+
+  async createAudioJob(userId: string, dto: CreateAudioDto) {
+    if (!this.audioEnabled) {
+      throw new NotImplementedException(
+        'Text-to-music belum tersedia: model ACE-Step belum terpasang di ' +
+          'ComfyUI. Aktifkan lewat COMFYUI_AUDIO_ENABLED=true setelah tersedia.',
+      );
+    }
+    const cost = this.quota.audioCreditCost;
+
+    const params: GenerationParams = {
+      width: 0,
+      height: 0,
+      steps: dto.steps ?? 50,
+      cfg: 5, // ACE-Step reference guidance
+      seed: dto.seed ?? this.randomSeed(),
+      seconds: dto.duration ?? 60,
+      lyrics: dto.lyrics,
+      lyricsStrength: dto.lyricsStrength,
+    };
+
+    return this.createJob({
+      userId,
+      type: JobType.AUDIO,
+      prompt: dto.prompt,
       params,
       cost,
       projectId: dto.projectId,
@@ -129,6 +162,11 @@ export class GenerationService {
     if (job.type === JobType.VIDEO && !this.videoEnabled) {
       throw new NotImplementedException(
         'Text-to-video belum tersedia — job video tidak dapat diulang.',
+      );
+    }
+    if (job.type === JobType.AUDIO && !this.audioEnabled) {
+      throw new NotImplementedException(
+        'Text-to-music belum tersedia — job audio tidak dapat diulang.',
       );
     }
 

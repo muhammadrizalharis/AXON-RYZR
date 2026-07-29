@@ -7,6 +7,10 @@ const MIME_EXT: Record<string, string> = {
   'image/gif': 'gif',
   'video/mp4': 'mp4',
   'video/webm': 'webm',
+  'audio/mpeg': 'mp3',
+  'audio/wav': 'wav',
+  'audio/flac': 'flac',
+  'audio/ogg': 'ogg',
 };
 
 export function extFromMime(mime?: string | null): string {

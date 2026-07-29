@@ -5,6 +5,7 @@ import {
   Loader2,
   Image as ImageIcon,
   Film,
+  Music,
   SlidersHorizontal,
   Sparkles,
   Dices,
@@ -24,6 +25,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
+  useGenerateAudio,
   useGenerateImage,
   useGenerateVideo,
 } from '@/features/generation/use-generate';
@@ -104,7 +106,9 @@ export function GenerationPanel() {
   const [negativePrompt, setNegativePrompt] = useState('');
   const [batchSize, setBatchSize] = useState(1);
   const [imageSteps, setImageSteps] = useState(25);
-  const [videoSteps, setVideoSteps] = useState(20);
+  const [videoSteps, setVideoSteps] = useState(25);
+  const [lyrics, setLyrics] = useState('');
+  const [musicDuration, setMusicDuration] = useState(60);
   const [advanced, setAdvanced] = useState(false);
   const [model, setModel] = useState<'aura' | 'genesis'>('aura');
   const [listening, setListening] = useState(false);
@@ -165,7 +169,11 @@ export function GenerationPanel() {
 
   const generateImage = useGenerateImage();
   const generateVideo = useGenerateVideo();
-  const pending = generateImage.isPending || generateVideo.isPending;
+  const generateAudio = useGenerateAudio();
+  const pending =
+    generateImage.isPending ||
+    generateVideo.isPending ||
+    generateAudio.isPending;
   const canSubmit = prompt.trim().length >= 3 && !pending;
 
   const submitImage = () => {
@@ -192,6 +200,15 @@ export function GenerationPanel() {
       duration,
       fps,
       steps: videoSteps,
+    });
+  };
+
+  const submitAudio = () => {
+    if (!canSubmit) return;
+    generateAudio.mutate({
+      prompt,
+      lyrics: lyrics.trim() || undefined,
+      duration: musicDuration,
     });
   };
 
@@ -310,6 +327,20 @@ export function GenerationPanel() {
               <Film className="h-4 w-4" />
             )}
             Generate Video
+          </button>
+          <button
+            type="button"
+            onClick={submitAudio}
+            disabled={!canSubmit}
+            title="Prompt = style tags musik (mis. synthwave, 80s, energetic). Lirik & durasi di Advanced Settings."
+            className="shimmer flex items-center gap-2 rounded-xl bg-gradient-to-r from-accent to-cyan px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-accent/20 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {generateAudio.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Music className="h-4 w-4" />
+            )}
+            Generate Music
           </button>
         </div>
       </div>
@@ -438,6 +469,36 @@ export function GenerationPanel() {
                 onChange={(e) => setVideoSteps(Number(e.target.value))}
                 className={numberCls}
               />
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-accent/20 bg-accent/5 p-3">
+            <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest text-accent">
+              <Music className="h-3.5 w-3.5" /> Music Options
+            </p>
+            <div className="grid gap-3 sm:grid-cols-[1fr_140px]">
+              <div>
+                <label className={labelCls}>
+                  Lyrics (opsional — kosong = instrumental)
+                </label>
+                <textarea
+                  value={lyrics}
+                  onChange={(e) => setLyrics(e.target.value)}
+                  placeholder={'[verse]\nNeon lights across the sky\u2026\n[chorus]\nWe ride tonight\u2026'}
+                  className="min-h-[72px] w-full resize-none rounded-lg border border-border/60 bg-background/50 p-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/50 focus:border-accent/60"
+                />
+              </div>
+              <div>
+                <label className={labelCls}>Music Duration (s)</label>
+                <input
+                  type="number"
+                  min={5}
+                  max={180}
+                  value={musicDuration}
+                  onChange={(e) => setMusicDuration(Number(e.target.value))}
+                  className={numberCls}
+                />
+              </div>
             </div>
           </div>
         </div>

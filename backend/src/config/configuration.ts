@@ -35,12 +35,14 @@ export interface ComfyuiConfig {
   timeoutMs: number;
   pollIntervalMs: number;
   videoEnabled: boolean;
+  audioEnabled: boolean;
 }
 
 export interface QuotaConfig {
   defaultUserCredits: number;
   imageCreditCost: number;
   videoCreditCost: number;
+  audioCreditCost: number;
   maxStorageBytesPerUser: number;
 }
 
@@ -109,11 +111,13 @@ export default (): Configuration => ({
     timeoutMs: toNumber(process.env.COMFYUI_TIMEOUT_MS, 600000),
     pollIntervalMs: toNumber(process.env.COMFYUI_POLL_INTERVAL_MS, 1500),
     videoEnabled: toBool(process.env.COMFYUI_VIDEO_ENABLED, false),
+    audioEnabled: toBool(process.env.COMFYUI_AUDIO_ENABLED, false),
   },
   quota: {
     defaultUserCredits: toNumber(process.env.DEFAULT_USER_CREDITS, 100),
     imageCreditCost: toNumber(process.env.IMAGE_CREDIT_COST, 1),
     videoCreditCost: toNumber(process.env.VIDEO_CREDIT_COST, 5),
+    audioCreditCost: toNumber(process.env.AUDIO_CREDIT_COST, 3),
     maxStorageBytesPerUser: toNumber(
       process.env.MAX_STORAGE_BYTES_PER_USER,
       5_368_709_120,

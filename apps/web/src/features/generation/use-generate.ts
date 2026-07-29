@@ -3,6 +3,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import type {
+  CreateAudioPayload,
   CreateImagePayload,
   CreateVideoPayload,
 } from '@axon-ryzr/shared';
@@ -33,6 +34,21 @@ export function useGenerateVideo() {
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
       queryClient.invalidateQueries({ queryKey: ['me'] });
       toast.success('Video generation queued');
+    },
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, 'Failed to queue generation')),
+  });
+}
+
+export function useGenerateAudio() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: CreateAudioPayload) =>
+      generationApi.createAudio(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      queryClient.invalidateQueries({ queryKey: ['me'] });
+      toast.success('Music generation queued');
     },
     onError: (err) =>
       toast.error(getApiErrorMessage(err, 'Failed to queue generation')),

@@ -6,6 +6,7 @@ import type { Asset } from '@axon-ryzr/shared';
 import { useCommunity } from '@/features/gallery/use-gallery';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Lightbox } from '@/components/ui/lightbox';
+import { AudioTile } from '@/components/ui/audio-tile';
 import { formatRelativeTime } from '@/lib/utils';
 
 function CommunityCard({ asset }: { asset: Asset }) {
@@ -34,6 +35,8 @@ function CommunityCard({ asset }: { asset: Asset }) {
                 </span>
               </span>
             </>
+          ) : asset.type === 'AUDIO' ? (
+            <AudioTile />
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
             <img

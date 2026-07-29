@@ -4,6 +4,7 @@ import { Throttle } from '@nestjs/throttler';
 import { GenerationService } from './generation.service';
 import { CreateImageDto } from './dto/create-image.dto';
 import { CreateVideoDto } from './dto/create-video.dto';
+import { CreateAudioDto } from './dto/create-audio.dto';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 
 @ApiTags('generation')
@@ -22,6 +23,12 @@ export class GenerationController {
   @Post('video')
   createVideo(@CurrentUser('id') userId: string, @Body() dto: CreateVideoDto) {
     return this.generationService.createVideoJob(userId, dto);
+  }
+
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Post('audio')
+  createAudio(@CurrentUser('id') userId: string, @Body() dto: CreateAudioDto) {
+    return this.generationService.createAudioJob(userId, dto);
   }
 
   @Throttle({ default: { limit: 20, ttl: 60_000 } })

@@ -9,6 +9,7 @@ import { ComfyuiService, ComfyOutputFile } from '../comfyui/comfyui.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { buildTextToImageWorkflow } from '../comfyui/workflows/text-to-image.workflow';
 import { buildTextToVideoWorkflow } from '../comfyui/workflows/text-to-video.workflow';
+import { buildTextToAudioWorkflow } from '../comfyui/workflows/text-to-audio.workflow';
 import {
   GENERATION_QUEUE,
   GenerationJobData,
@@ -68,9 +69,9 @@ export class JobsProcessor extends WorkerHost {
     params: GenerationParams,
   ): Record<string, unknown> {
     if (type === JobType.VIDEO) {
-      const fps = params.fps ?? 8;
+      const fps = params.fps ?? 24;
       const frames =
-        params.frames ?? Math.max(1, Math.round((params.duration ?? 2) * fps));
+        params.frames ?? Math.max(1, Math.round((params.duration ?? 5) * fps));
       return buildTextToVideoWorkflow({
         prompt,
         negativePrompt,
@@ -83,8 +84,20 @@ export class JobsProcessor extends WorkerHost {
         fps,
         samplerName: params.samplerName,
         scheduler: params.scheduler,
-        checkpoint: params.checkpoint,
-        motionModule: params.motionModule,
+      });
+    }
+
+    if (type === JobType.AUDIO) {
+      return buildTextToAudioWorkflow({
+        tags: prompt,
+        lyrics: params.lyrics,
+        seconds: params.seconds ?? 60,
+        steps: params.steps,
+        cfg: params.cfg,
+        seed: params.seed,
+        lyricsStrength: params.lyricsStrength,
+        samplerName: params.samplerName,
+        scheduler: params.scheduler,
       });
     }
 
@@ -107,7 +120,11 @@ export class JobsProcessor extends WorkerHost {
     outputs: ComfyOutputFile[],
   ) {
     const assetType =
-      type === JobType.VIDEO ? AssetType.VIDEO : AssetType.IMAGE;
+      type === JobType.VIDEO
+        ? AssetType.VIDEO
+        : type === JobType.AUDIO
+          ? AssetType.AUDIO
+          : AssetType.IMAGE;
     const created: Array<{ id: string; url: string; type: string }> = [];
 
     for (const file of outputs) {

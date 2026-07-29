@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import type { Job } from '@axon-ryzr/shared';
 import { Lightbox } from '@/components/ui/lightbox';
+import { AudioTile } from '@/components/ui/audio-tile';
 import { useCancelJob } from '@/features/generation/use-jobs';
 import { useRetryJob } from '@/features/generation/use-generate';
 import { downloadFile, extFromMime } from '@/lib/download';
@@ -58,6 +59,8 @@ export function JobCard({ job }: { job: Job }) {
                   </span>
                 </span>
               </>
+            ) : job.type === 'AUDIO' ? (
+              <AudioTile />
             ) : (
               // eslint-disable-next-line @next/next/no-img-element
               <img

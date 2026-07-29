@@ -33,6 +33,11 @@ const MIME_BY_EXT: Record<string, string> = {
   gif: 'image/gif',
   mp4: 'video/mp4',
   webm: 'video/webm',
+  mp3: 'audio/mpeg',
+  wav: 'audio/wav',
+  flac: 'audio/flac',
+  opus: 'audio/ogg',
+  ogg: 'audio/ogg',
 };
 
 @Injectable()

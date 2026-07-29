@@ -43,19 +43,19 @@ export class CreateVideoDto {
   @IsNumber()
   @Min(1)
   @Max(10)
-  duration?: number = 2; // seconds
+  duration?: number = 5; // seconds
 
   @IsOptional()
   @IsInt()
   @Min(4)
   @Max(30)
-  fps?: number = 8;
+  fps?: number = 24;
 
   @IsOptional()
   @IsInt()
   @Min(1)
   @Max(60)
-  steps?: number = 20;
+  steps?: number = 25;
 
   @IsOptional()
   @IsInt()

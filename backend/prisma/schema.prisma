@@ -24,6 +24,7 @@ enum Role {
 enum JobType {
   IMAGE
   VIDEO
+  AUDIO
 }
 
 enum JobStatus {
@@ -37,6 +38,7 @@ enum JobStatus {
 enum AssetType {
   IMAGE
   VIDEO
+  AUDIO
 }
 
 enum CreditTxnType {
