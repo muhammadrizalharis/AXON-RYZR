@@ -5,7 +5,11 @@ import { Job as BullJob } from 'bullmq';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { UsersService } from '../users/users.service';
-import { ComfyuiService, ComfyOutputFile } from '../comfyui/comfyui.service';
+import {
+  ComfyuiService,
+  ComfyOutputFile,
+  ComfyInterruptedError,
+} from '../comfyui/comfyui.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { buildTextToImageWorkflow } from '../comfyui/workflows/text-to-image.workflow';
 import { buildTextToVideoWorkflow } from '../comfyui/workflows/text-to-video.workflow';
@@ -39,27 +43,59 @@ export class JobsProcessor extends WorkerHost {
     this.logger.log(`Processing job ${jobId} (${type}) for user ${userId}`);
 
     try {
-      await this.markRendering(jobId, userId, type);
+      const started = await this.markRendering(jobId, userId, type);
+      if (!started) {
+        this.logger.log(`Job ${jobId} was cancelled before rendering started`);
+        return;
+      }
 
       const workflow = this.buildWorkflow(type, prompt, negativePrompt, params);
 
       let lastEmitted = -1;
-      const outputs = await this.comfyui.runWorkflow(workflow, async (p) => {
-        // Throttle DB writes/socket emits to meaningful progress steps.
-        if (p - lastEmitted >= 5 || p === 100) {
-          lastEmitted = p;
-          await this.updateProgress(jobId, userId, type, p);
-        }
-      });
+      const outputs = await this.comfyui.runWorkflow(
+        workflow,
+        async (p) => {
+          // Throttle DB writes/socket emits to meaningful progress steps.
+          if (p - lastEmitted >= 5 || p === 100) {
+            lastEmitted = p;
+            await this.updateProgress(jobId, userId, type, p);
+          }
+        },
+        async (promptId) => {
+          // Track the ComfyUI prompt so a user cancel can interrupt the GPU.
+          await this.prisma.job.update({
+            where: { id: jobId },
+            data: { comfyPromptId: promptId },
+          });
+        },
+      );
+
+      // The user may have cancelled while the render was finishing.
+      if (await this.isCancelled(jobId)) {
+        this.logger.log(`Job ${jobId} cancelled — discarding outputs`);
+        return;
+      }
 
       const assets = await this.persistOutputs(userId, jobId, type, outputs);
 
       await this.markCompleted(jobId, userId, type, assets);
       this.logger.log(`Job ${jobId} completed with ${assets.length} asset(s)`);
     } catch (err) {
+      if (err instanceof ComfyInterruptedError || (await this.isCancelled(jobId))) {
+        this.logger.log(`Job ${jobId} cancelled by user — no retry`);
+        return; // do not mark FAILED, do not refund again, do not retry
+      }
       await this.handleFailure(bullJob, err as Error);
       throw err; // let BullMQ apply retry/backoff
     }
+  }
+
+  private async isCancelled(jobId: string): Promise<boolean> {
+    const row = await this.prisma.job.findUnique({
+      where: { id: jobId },
+      select: { status: true },
+    });
+    return row?.status === JobStatus.CANCELLED;
   }
 
   private buildWorkflow(
@@ -161,21 +197,34 @@ export class JobsProcessor extends WorkerHost {
     return created;
   }
 
-  private async markRendering(jobId: string, userId: string, type: JobType) {
-    await this.prisma.job.update({
-      where: { id: jobId },
+  /**
+   * Flips the job to RENDERING. Returns false when the job is no longer in a
+   * runnable state (e.g. the user cancelled it while it sat in the queue).
+   */
+  private async markRendering(
+    jobId: string,
+    userId: string,
+    type: JobType,
+  ): Promise<boolean> {
+    const res = await this.prisma.job.updateMany({
+      where: {
+        id: jobId,
+        status: { in: [JobStatus.QUEUED, JobStatus.RENDERING] },
+      },
       data: {
         status: JobStatus.RENDERING,
         startedAt: new Date(),
         progress: 0,
       },
     });
+    if (res.count === 0) return false;
     this.realtime.emitJobUpdate(userId, {
       jobId,
       status: JobStatus.RENDERING,
       progress: 0,
       type,
     });
+    return true;
   }
 
   private async updateProgress(
@@ -202,8 +251,8 @@ export class JobsProcessor extends WorkerHost {
     type: JobType,
     assets: Array<{ id: string; url: string; type: string }>,
   ) {
-    await this.prisma.job.update({
-      where: { id: jobId },
+    const res = await this.prisma.job.updateMany({
+      where: { id: jobId, status: { not: JobStatus.CANCELLED } },
       data: {
         status: JobStatus.COMPLETED,
         progress: 100,
@@ -211,6 +260,7 @@ export class JobsProcessor extends WorkerHost {
         error: null,
       },
     });
+    if (res.count === 0) return;
     this.realtime.emitJobUpdate(userId, {
       jobId,
       status: JobStatus.COMPLETED,
@@ -232,19 +282,30 @@ export class JobsProcessor extends WorkerHost {
     );
 
     if (!isFinalAttempt) {
-      // Will be retried by BullMQ; keep status as RENDERING/QUEUED.
+      // Will be retried by BullMQ; surface the wait to the user via QUEUED.
+      await this.prisma.job.updateMany({
+        where: { id: jobId, status: JobStatus.RENDERING },
+        data: { status: JobStatus.QUEUED, progress: 0 },
+      });
+      this.realtime.emitJobUpdate(userId, {
+        jobId,
+        status: JobStatus.QUEUED,
+        progress: 0,
+        type,
+      });
       return;
     }
 
-    // Final failure: mark failed and refund credits.
-    await this.prisma.job.update({
-      where: { id: jobId },
+    // Final failure: mark failed and refund credits (skip if user-cancelled).
+    const marked = await this.prisma.job.updateMany({
+      where: { id: jobId, status: { not: JobStatus.CANCELLED } },
       data: {
         status: JobStatus.FAILED,
         error: err.message.slice(0, 500),
         finishedAt: new Date(),
       },
     });
+    if (marked.count === 0) return;
 
     try {
       await this.users.refundCredits(userId, creditsCost, jobId);

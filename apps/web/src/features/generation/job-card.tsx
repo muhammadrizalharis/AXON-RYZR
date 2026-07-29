@@ -188,10 +188,10 @@ export function JobCard({ job }: { job: Job }) {
                 <button
                   type="button"
                   onClick={() => cancel.mutate(job.id)}
-                  disabled={job.status === 'RENDERING'}
+                  disabled={cancel.isPending}
                   className="h-7 rounded-lg border border-destructive/40 px-2 text-[10px] font-semibold uppercase text-red-400 transition hover:bg-destructive/10 disabled:opacity-40"
                 >
-                  Cancel
+                  {cancel.isPending ? 'Cancelling…' : 'Cancel'}
                 </button>
               )}
             </div>

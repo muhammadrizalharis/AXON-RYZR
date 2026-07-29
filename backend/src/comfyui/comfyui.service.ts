@@ -19,6 +19,16 @@ export interface ComfyOutputFile {
 
 export type ProgressCallback = (progress: number) => void | Promise<void>;
 
+export type SubmittedCallback = (promptId: string) => void | Promise<void>;
+
+/** Thrown when the running prompt is interrupted (user cancel). */
+export class ComfyInterruptedError extends Error {
+  constructor() {
+    super('ComfyUI execution interrupted');
+    this.name = 'ComfyInterruptedError';
+  }
+}
+
 interface PromptResponse {
   prompt_id: string;
   number: number;
@@ -62,11 +72,40 @@ export class ComfyuiService {
   async runWorkflow(
     workflow: Record<string, unknown>,
     onProgress?: ProgressCallback,
+    onSubmitted?: SubmittedCallback,
   ): Promise<ComfyOutputFile[]> {
     const clientId = randomUUID();
     const promptId = await this.submitPrompt(workflow, clientId);
+    await onSubmitted?.(promptId);
     await this.waitForCompletion(promptId, clientId, onProgress);
     return this.collectOutputs(promptId);
+  }
+
+  /**
+   * Cancels a prompt: removes it from the ComfyUI pending queue, or
+   * interrupts execution if it is currently running.
+   */
+  async cancelPrompt(promptId: string): Promise<void> {
+    try {
+      const { data } = await this.http.get<{
+        queue_running: Array<[number, string]>;
+        queue_pending: Array<[number, string]>;
+      }>('/queue');
+      const isPending = data.queue_pending?.some((e) => e?.[1] === promptId);
+      const isRunning = data.queue_running?.some((e) => e?.[1] === promptId);
+
+      if (isPending) {
+        await this.http.post('/queue', { delete: [promptId] });
+        this.logger.log(`Removed pending ComfyUI prompt ${promptId}`);
+      } else if (isRunning) {
+        await this.http.post('/interrupt');
+        this.logger.log(`Interrupted running ComfyUI prompt ${promptId}`);
+      }
+    } catch (err) {
+      this.logger.warn(
+        `Failed to cancel ComfyUI prompt ${promptId}: ${(err as Error).message}`,
+      );
+    }
   }
 
   async health(): Promise<boolean> {
@@ -170,6 +209,12 @@ export class ComfyuiService {
             if (data.node === null && data.prompt_id === promptId) {
               void onProgress?.(100);
               finish();
+            }
+            break;
+          }
+          case 'execution_interrupted': {
+            if (data.prompt_id === promptId) {
+              finish(new ComfyInterruptedError());
             }
             break;
           }

@@ -5,6 +5,8 @@ import { Queue } from 'bullmq';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { UsersService } from '../users/users.service';
+import { ComfyuiService } from '../comfyui/comfyui.service';
+import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { serializeBigInt } from '../common/utils/serialize';
 import {
   GENERATION_JOB_NAME,
@@ -20,6 +22,8 @@ export class JobsService {
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
     private readonly users: UsersService,
+    private readonly comfyui: ComfyuiService,
+    private readonly realtime: RealtimeGateway,
   ) {}
 
   /**
@@ -28,8 +32,10 @@ export class JobsService {
   async enqueue(data: GenerationJobData): Promise<void> {
     const job = await this.queue.add(GENERATION_JOB_NAME, data, {
       jobId: data.jobId,
-      attempts: 2,
-      backoff: { type: 'exponential', delay: 5_000 },
+      // Transient GPU pressure (e.g. a long video render hogging VRAM) can
+      // fail a few attempts in a row — back off up to ~3.5 minutes total.
+      attempts: 4,
+      backoff: { type: 'exponential', delay: 30_000 },
       removeOnComplete: { age: 3600, count: 1000 },
       removeOnFail: { age: 24 * 3600 },
     });
@@ -81,23 +87,64 @@ export class JobsService {
     };
   }
 
+  /**
+   * Cancels a QUEUED or RENDERING job. The status is flipped first (atomic
+   * guard against double-refunds), then the BullMQ entry is removed and the
+   * ComfyUI prompt is dequeued/interrupted, and finally credits are refunded.
+   */
   async cancel(userId: string, jobId: string) {
     const job = await this.prisma.job.findUnique({ where: { id: jobId } });
     if (!job || job.userId !== userId) {
       throw new NotFoundException('Job not found');
     }
-    if (job.status === JobStatus.QUEUED) {
+    if (
+      job.status !== JobStatus.QUEUED &&
+      job.status !== JobStatus.RENDERING
+    ) {
+      return serializeBigInt(job);
+    }
+
+    // Atomic flip — count 0 means someone else already finished/cancelled it.
+    const flipped = await this.prisma.job.updateMany({
+      where: {
+        id: jobId,
+        status: { in: [JobStatus.QUEUED, JobStatus.RENDERING] },
+      },
+      data: { status: JobStatus.CANCELLED, finishedAt: new Date() },
+    });
+    if (flipped.count === 0) {
+      const current = await this.prisma.job.findUnique({
+        where: { id: jobId },
+      });
+      return serializeBigInt(current);
+    }
+
+    // Best-effort: drop from BullMQ (throws if already active — ignore).
+    try {
       const queued = await this.queue.getJob(jobId);
       await queued?.remove();
-      const cancelled = await this.prisma.job.update({
-        where: { id: jobId },
-        data: { status: JobStatus.CANCELLED },
-      });
-      // Return the credits reserved for a job that never ran.
-      await this.users.refundCredits(userId, job.creditsCost, jobId);
-      return cancelled;
+    } catch {
+      /* job already picked up by the worker — interrupt below */
     }
-    return job;
+
+    // Stop the GPU work if it is queued/running on ComfyUI.
+    if (job.comfyPromptId) {
+      await this.comfyui.cancelPrompt(job.comfyPromptId);
+    }
+
+    // Return the credits — the render never delivered.
+    await this.users.refundCredits(userId, job.creditsCost, jobId);
+
+    const cancelled = await this.prisma.job.findUnique({
+      where: { id: jobId },
+    });
+    this.realtime.emitJobUpdate(userId, {
+      jobId,
+      status: JobStatus.CANCELLED,
+      progress: job.progress,
+      type: job.type,
+    });
+    return serializeBigInt(cancelled);
   }
 
   private async withAssetUrls(job: {

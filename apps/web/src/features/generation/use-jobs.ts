@@ -26,7 +26,8 @@ export function useCancelJob() {
     mutationFn: (id: string) => jobsApi.cancel(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
-      toast.success('Job cancelled');
+      queryClient.invalidateQueries({ queryKey: ['me'] });
+      toast.success('Render dibatalkan — kredit dikembalikan');
     },
     onError: (err) => toast.error(getApiErrorMessage(err, 'Cancel failed')),
   });
