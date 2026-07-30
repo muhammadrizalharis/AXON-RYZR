@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   LogOut,
   User as UserIcon,
@@ -10,6 +10,10 @@ import {
   Loader2,
   Eye,
   EyeOff,
+  Gauge,
+  Zap,
+  Feather,
+  Wand2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -19,6 +23,7 @@ import {
 } from '@/features/auth/use-auth';
 import { useAuthStore } from '@/store/auth-store';
 import { isAdminRole } from '@/components/layout/nav-items';
+import { cn } from '@/lib/utils';
 
 function Field({ label, value }: { label: string; value?: string | null }) {
   return (
@@ -137,6 +142,114 @@ function ChangePasswordSection() {
   );
 }
 
+type PerfMode = 'auto' | 'full' | 'lite';
+
+function isWeakDevice(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const nav = navigator as Navigator & { deviceMemory?: number };
+  return (
+    (nav.hardwareConcurrency || 8) <= 4 ||
+    (nav.deviceMemory || 8) <= 4 ||
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
+}
+
+function applyPerfMode(mode: PerfMode) {
+  const lite = mode === 'lite' || (mode === 'auto' && isWeakDevice());
+  document.documentElement.classList.toggle('lite', lite);
+}
+
+function PerformanceSection() {
+  const [mode, setMode] = useState<PerfMode>('auto');
+  const [weak, setWeak] = useState(false);
+
+  useEffect(() => {
+    setMode((localStorage.getItem('axon-perf') as PerfMode) || 'auto');
+    setWeak(isWeakDevice());
+  }, []);
+
+  const choose = (m: PerfMode) => {
+    setMode(m);
+    localStorage.setItem('axon-perf', m);
+    applyPerfMode(m);
+    toast.success(
+      m === 'lite'
+        ? 'Mode Ringan aktif — efek berat dimatikan'
+        : m === 'full'
+          ? 'Mode Penuh aktif — semua efek visual menyala'
+          : 'Mode Auto — menyesuaikan kemampuan perangkat',
+    );
+  };
+
+  const OPTIONS: Array<{
+    value: PerfMode;
+    label: string;
+    desc: string;
+    icon: typeof Zap;
+  }> = [
+    {
+      value: 'auto',
+      label: 'Auto',
+      desc: weak
+        ? 'Perangkat ini terdeteksi ringan — efek dihemat otomatis'
+        : 'Perangkat ini kuat — efek penuh otomatis',
+      icon: Wand2,
+    },
+    {
+      value: 'full',
+      label: 'Penuh',
+      desc: 'Semua glow, blur & animasi — untuk perangkat kencang',
+      icon: Zap,
+    },
+    {
+      value: 'lite',
+      label: 'Ringan',
+      desc: 'Tanpa animasi terus-menerus & blur — anti-lag',
+      icon: Feather,
+    },
+  ];
+
+  return (
+    <section className="hud-panel rounded-2xl p-6">
+      <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold text-foreground">
+        <Gauge className="h-4 w-4 text-cyan" /> Performance — Mode Tampilan
+      </h2>
+      <p className="mb-4 text-xs text-muted-foreground">
+        Laptop/HP kentang? Pilih Ringan: tampilan tetap cyberpunk, tapi semua
+        efek mahal (blur kaca, glow berdenyut, hujan biner, partikel)
+        dimatikan supaya mulus.
+      </p>
+      <div className="grid gap-3 sm:grid-cols-3">
+        {OPTIONS.map((o) => (
+          <button
+            key={o.value}
+            type="button"
+            onClick={() => choose(o.value)}
+            className={cn(
+              'rounded-xl border p-4 text-left transition',
+              mode === o.value
+                ? 'border-cyan/70 bg-cyan/10 glow-cyan'
+                : 'border-border/60 bg-background/40 hover:border-cyan/40',
+            )}
+          >
+            <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
+              <o.icon className="h-4 w-4 text-cyan" /> {o.label}
+              {mode === o.value && (
+                <span className="ml-auto rounded-md border border-cyan/40 bg-cyan/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-cyan">
+                  Aktif
+                </span>
+              )}
+            </span>
+            <span className="mt-1.5 block text-[11px] leading-relaxed text-muted-foreground">
+              {o.desc}
+            </span>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export default function SettingsPage() {
   const { data } = useCurrentUser();
   const cached = useAuthStore((s) => s.user);
@@ -162,6 +275,8 @@ export default function SettingsPage() {
       </section>
 
       <ChangePasswordSection />
+
+      <PerformanceSection />
 
       <section className="hud-panel rounded-2xl p-6">
         <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-foreground">

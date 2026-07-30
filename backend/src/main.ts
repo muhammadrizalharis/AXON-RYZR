@@ -51,7 +51,7 @@ async function bootstrap(): Promise<void> {
     SwaggerModule.setup(`${appConfig.globalPrefix}/docs`, app, document);
   }
 
-  await app.listen(appConfig.port, '0.0.0.0');
+  await app.listen(appConfig.port, appConfig.host);
 
   const logger = new Logger('Bootstrap');
   logger.log(

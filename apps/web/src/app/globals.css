@@ -401,3 +401,84 @@ input:-webkit-autofill:active {
   30%, 50%, 70% { transform: translateX(-6px); }
   40%, 60% { transform: translateX(6px); }
 }
+
+/* ===================================================================== */
+/* LITE MODE — potato-safe rendering                                     */
+/* Applied as html.lite (auto-detected low-end device, user choice in    */
+/* Settings, or prefers-reduced-motion). Kills every continuous          */
+/* animation and GPU-expensive filter while keeping the look intact.    */
+/* ===================================================================== */
+html.lite .aurora,
+html.lite .hud-grid::before,
+html.lite .holo-text,
+html.lite .animate-float,
+html.lite .animate-spin-slow,
+html.lite .animate-spin-reverse,
+html.lite .animate-glow-pulse,
+html.lite .animate-scan,
+html.lite .animate-flicker,
+html.lite .text-danger-flicker,
+html.lite .animate-ring-pulse,
+html.lite .animate-pulse {
+  animation: none !important;
+}
+
+/* Decorative layers: skip painting them entirely */
+html.lite .particle,
+html.lite .binary-rain,
+html.lite .floor-grid,
+html.lite .shimmer::after,
+html.lite .bar-sweep::after,
+html.lite .scanlines::after {
+  display: none !important;
+}
+
+/* backdrop-filter is the #1 cost on weak GPUs — swap for solid panels */
+html.lite .glass,
+html.lite .hud-panel,
+html.lite [class*='backdrop-blur'] {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+html.lite .glass,
+html.lite .hud-panel {
+  background: hsl(var(--card) / 0.94);
+}
+html.lite [class*='bg-background\/'] {
+  background-color: hsl(var(--background) / 0.96);
+}
+html.lite [class*='bg-card\/'] {
+  background-color: hsl(var(--card) / 0.96);
+}
+
+/* Soften heavy static glows (cheap, but skip the big blur radii) */
+html.lite .glow-cyan,
+html.lite .glow-magenta,
+html.lite .glow-violet {
+  box-shadow: none;
+}
+
+/* Same guarantees for users who ask the OS to reduce motion */
+@media (prefers-reduced-motion: reduce) {
+  .aurora,
+  .hud-grid::before,
+  .holo-text,
+  .animate-float,
+  .animate-spin-slow,
+  .animate-spin-reverse,
+  .animate-glow-pulse,
+  .animate-scan,
+  .animate-flicker,
+  .text-danger-flicker,
+  .animate-ring-pulse,
+  .animate-pulse {
+    animation: none !important;
+  }
+  .particle,
+  .binary-rain,
+  .floor-grid,
+  .shimmer::after,
+  .bar-sweep::after {
+    display: none !important;
+  }
+}

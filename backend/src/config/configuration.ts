@@ -1,6 +1,7 @@
 export interface AppConfig {
   nodeEnv: string;
   port: number;
+  host: string;
   globalPrefix: string;
   webUrl: string;
   corsOrigins: string[];
@@ -81,6 +82,7 @@ export default (): Configuration => ({
   app: {
     nodeEnv: process.env.NODE_ENV ?? 'development',
     port: toNumber(process.env.API_PORT, 4000),
+    host: process.env.API_HOST ?? '0.0.0.0',
     globalPrefix: process.env.API_GLOBAL_PREFIX ?? 'api',
     webUrl: process.env.WEB_URL ?? 'http://localhost:3000',
     corsOrigins: toList(process.env.CORS_ORIGINS) ?? ['http://localhost:3000'],
