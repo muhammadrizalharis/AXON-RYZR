@@ -64,7 +64,7 @@ export default function RegisterPage() {
               <input
                 type="text"
                 autoComplete="name"
-                placeholder="Muhammad Rizal Haris"
+                placeholder="Nama lengkap"
                 className="h-12 w-full rounded-xl border border-cyan/25 bg-background/60 pl-10 pr-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/60 focus:border-cyan focus:glow-cyan"
                 {...register('name')}
               />
