@@ -48,6 +48,9 @@ export function snapWanFrames(frames: number): number {
   return Math.max(5, Math.round((frames - 1) / 4) * 4 + 1);
 }
 
+/** Above this frame count the VAE decode switches to tiled mode (VRAM). */
+const TILED_DECODE_THRESHOLD = 200;
+
 const DEFAULT_NEGATIVE =
   'blurry, distorted, low quality, watermark, text, jpeg artifacts, ' +
   'static, frozen frame, flickering';
@@ -75,6 +78,27 @@ export function buildTextToVideoWorkflow(
     vae = envStr('COMFYUI_WAN_VAE', 'wan2.2_vae.safetensors'),
     shift = envNum('COMFYUI_WAN_SHIFT', 8),
   } = params;
+
+  const length = snapWanFrames(frames);
+
+  // Long clips decode tiled so VRAM stays bounded on a single GPU.
+  const decode =
+    length > TILED_DECODE_THRESHOLD
+      ? {
+          class_type: 'VAEDecodeTiled',
+          inputs: {
+            samples: ['sample', 0],
+            vae: ['vae', 0],
+            tile_size: 512,
+            overlap: 64,
+            temporal_size: 64,
+            temporal_overlap: 8,
+          },
+        }
+      : {
+          class_type: 'VAEDecode',
+          inputs: { samples: ['sample', 0], vae: ['vae', 0] },
+        };
 
   return {
     unet: {
@@ -110,7 +134,7 @@ export function buildTextToVideoWorkflow(
         vae: ['vae', 0],
         width,
         height,
-        length: snapWanFrames(frames),
+        length,
         batch_size: 1,
       },
     },
@@ -129,10 +153,7 @@ export function buildTextToVideoWorkflow(
         latent_image: ['latent', 0],
       },
     },
-    decode: {
-      class_type: 'VAEDecode',
-      inputs: { samples: ['sample', 0], vae: ['vae', 0] },
-    },
+    decode,
     video: {
       class_type: 'CreateVideo',
       inputs: { images: ['decode', 0], fps },

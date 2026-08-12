@@ -176,6 +176,10 @@ export function GenerationPanel() {
     generateAudio.isPending;
   const canSubmit = prompt.trim().length >= 3 && !pending;
 
+  // Wan 2.2 renders ~121 frames in ~3.5 minutes — give an honest estimate.
+  const videoFrames = Math.max(5, Math.round(duration * fps));
+  const videoEta = Math.max(1, Math.round((videoFrames / 121) * 3.5));
+
   const submitImage = () => {
     if (!canSubmit) return;
     generateImage.mutate({
@@ -319,6 +323,7 @@ export function GenerationPanel() {
             type="button"
             onClick={submitVideo}
             disabled={!canSubmit}
+            title={`Perkiraan render ±${videoEta} menit (${duration}s × ${fps}fps = ${videoFrames} frame). Makin panjang durasi & FPS, makin lama.`}
             className="shimmer flex items-center gap-2 rounded-xl bg-gradient-to-r from-primary to-accent px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-primary/20 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {generateVideo.isPending ? (
@@ -327,6 +332,9 @@ export function GenerationPanel() {
               <Film className="h-4 w-4" />
             )}
             Generate Video
+            <span className="rounded-md bg-white/15 px-1.5 py-0.5 font-mono text-[10px]">
+              ±{videoEta}m
+            </span>
           </button>
           <button
             type="button"
@@ -442,7 +450,7 @@ export function GenerationPanel() {
               <input
                 type="number"
                 min={1}
-                max={10}
+                max={15}
                 value={duration}
                 onChange={(e) => setDuration(Number(e.target.value))}
                 className={numberCls}

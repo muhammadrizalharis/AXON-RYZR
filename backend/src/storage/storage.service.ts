@@ -160,4 +160,18 @@ export class StorageService implements OnModuleInit {
   async getObjectStream(storageKey: string): Promise<NodeJS.ReadableStream> {
     return this.client.getObject(this.config.bucket, storageKey);
   }
+
+  /** Streams a byte range of an object (HTTP Range support). */
+  async getPartialObjectStream(
+    storageKey: string,
+    offset: number,
+    length: number,
+  ): Promise<NodeJS.ReadableStream> {
+    return this.client.getPartialObject(
+      this.config.bucket,
+      storageKey,
+      offset,
+      length,
+    );
+  }
 }

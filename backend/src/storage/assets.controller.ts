@@ -32,13 +32,42 @@ export class AssetsController {
       throw new NotFoundException('Asset not found');
     }
 
-    res.setHeader(
-      'Content-Type',
+    const contentType =
       (stat.metaData && stat.metaData['content-type']) ||
-        'application/octet-stream',
-    );
-    res.setHeader('Content-Length', String(stat.size));
+      'application/octet-stream';
+    res.setHeader('Content-Type', contentType);
     res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.setHeader('Accept-Ranges', 'bytes');
+
+    // Range support so <video>/<audio> can seek without full download.
+    const range = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range ?? '');
+    if (range && (range[1] || range[2])) {
+      const start = range[1] ? parseInt(range[1], 10) : 0;
+      const end = range[2]
+        ? Math.min(parseInt(range[2], 10), stat.size - 1)
+        : stat.size - 1;
+      if (start >= stat.size || start > end) {
+        res.status(416).setHeader('Content-Range', `bytes */${stat.size}`);
+        res.end();
+        return;
+      }
+      res.status(206);
+      res.setHeader('Content-Range', `bytes ${start}-${end}/${stat.size}`);
+      res.setHeader('Content-Length', String(end - start + 1));
+      const partial = await this.storage.getPartialObjectStream(
+        key,
+        start,
+        end - start + 1,
+      );
+      partial.on('error', () => {
+        if (!res.headersSent) res.status(404);
+        res.end();
+      });
+      partial.pipe(res);
+      return;
+    }
+
+    res.setHeader('Content-Length', String(stat.size));
 
     const stream = await this.storage.getObjectStream(key);
     stream.on('error', () => {

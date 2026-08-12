@@ -13,6 +13,14 @@ export interface HumanError {
 
 const RULES: Array<{ re: RegExp; out: HumanError }> = [
   {
+    re: /generation timed out/i,
+    out: {
+      title: 'Render melebihi batas waktu',
+      hint: 'Video terlalu panjang/berat untuk sekali render. Kurangi durasi atau FPS (mis. 5–8 detik @ 24 FPS) lalu Generate Ulang.',
+      retryable: true,
+    },
+  },
+  {
     re: /vram|out of memory|oom|cuda.*memory|grow failed|allocat/i,
     out: {
       title: 'GPU sedang penuh',
