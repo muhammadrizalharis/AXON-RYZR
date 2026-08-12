@@ -20,13 +20,14 @@ export async function GET(
   const key = params.path.map(encodeURIComponent).join('/');
   const upstreamHeaders: Record<string, string> = {
     'ngrok-skip-browser-warning': 'true',
+    // Media is already compressed; transcoding breaks content-length.
+    'accept-encoding': 'identity',
   };
   const range = req.headers.get('range');
   if (range) upstreamHeaders.Range = range;
 
   const upstream = await fetch(`${API_ORIGIN}/assets/${key}`, {
     headers: upstreamHeaders,
-    // Assets are immutable (UUID keys) — let the edge cache them.
     cache: 'no-store',
   });
 
@@ -35,19 +36,23 @@ export async function GET(
   }
 
   const headers = new Headers();
-  for (const h of [
-    'content-type',
-    'content-length',
-    'content-range',
-    'accept-ranges',
-    'cache-control',
-  ]) {
+  for (const h of ['content-type', 'content-range', 'accept-ranges']) {
     const v = upstream.headers.get(h);
     if (v) headers.set(h, v);
   }
-  if (!headers.has('cache-control')) {
-    headers.set('cache-control', 'public, max-age=86400, immutable');
+  // Forward length only when the body was not re-encoded in transit.
+  if (!upstream.headers.get('content-encoding')) {
+    const len = upstream.headers.get('content-length');
+    if (len) headers.set('content-length', len);
   }
+  // Cache only full responses — partial (206) bodies must never be reused
+  // by the CDN to answer plain GETs.
+  headers.set(
+    'cache-control',
+    upstream.status === 206
+      ? 'no-store'
+      : 'public, max-age=31536000, immutable',
+  );
 
   return new Response(upstream.body, {
     status: upstream.status,
