@@ -5,6 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import type { JobEventPayload, Paginated, Job } from '@axon-ryzr/shared';
 import { getSocket } from '@/lib/socket';
+import { humanizeJobError } from '@/lib/error-humanizer';
 import { useAuthStore } from '@/store/auth-store';
 
 /**
@@ -46,7 +47,8 @@ export function useJobUpdates() {
         queryClient.invalidateQueries({ queryKey: ['jobs'] });
         queryClient.invalidateQueries({ queryKey: ['gallery'] });
       } else if (event.status === 'FAILED') {
-        toast.error(event.error || 'Generation failed');
+        const human = humanizeJobError(event.error);
+        toast.error(human ? `${human.title} — ${human.hint}` : 'Render gagal');
         queryClient.invalidateQueries({ queryKey: ['jobs'] });
         queryClient.invalidateQueries({ queryKey: ['me'] });
       }

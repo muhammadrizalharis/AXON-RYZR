@@ -5,6 +5,7 @@ import axios, {
 } from 'axios';
 import type { AuthTokens } from '@axon-ryzr/shared';
 import { env } from './env';
+import { toSameOriginAssets } from './asset-proxy';
 import { useAuthStore } from '@/store/auth-store';
 
 export const apiClient: AxiosInstance = axios.create({
@@ -35,7 +36,11 @@ const flushQueue = (token: string | null) => {
 };
 
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Media must be same-origin to play inline (see lib/asset-proxy.ts).
+    response.data = toSameOriginAssets(response.data);
+    return response;
+  },
   async (error: AxiosError) => {
     const original = error.config as InternalAxiosRequestConfig & {
       _retry?: boolean;
