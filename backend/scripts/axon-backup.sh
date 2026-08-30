@@ -22,9 +22,13 @@ set -euo pipefail
 
 BASE="$HOME/.axon-ryzr-dev"
 OUT="$HOME/axon-backups"
-ENVFILE="$HOME/DATA_ICAL/AXON-RYZR/backend/.env"
+REPO="$HOME/DATA_ICAL/AXON-RYZR"
+ENVFILE="$REPO/.env"            # root .env stack Docker (POSTGRES_*, MINIO_*)
 PASSFILE="$BASE/backup.pass"
 PGDUMP="$BASE/conda-env/bin/pg_dump"
+MC="$BASE/bin/mc"
+PGHOST=127.0.0.1; PGPORT=55432          # Postgres Docker dipetakan ke loopback
+MINIO_ENDPOINT="http://127.0.0.1:9200"  # MinIO Docker (loopback)
 RCLONE="$HOME/bin/rclone"
 REMOTE="gdrive:AXON-Backups"
 KEEP_DAYS=14
@@ -38,12 +42,13 @@ if [[ ! -f "$PASSFILE" ]]; then
   echo "[backup] passphrase baru dibuat di $PASSFILE — SIMPAN SALINANNYA!"
 fi
 
-# Ambil DATABASE_URL dari backend/.env tanpa mengekspor variabel lain.
-DATABASE_URL="$(grep -E '^DATABASE_URL=' "$ENVFILE" | head -1 | cut -d= -f2- | tr -d '"')"
-# pg_dump tidak mengenal parameter Prisma seperti ?schema=public — buang query string.
-DATABASE_URL="${DATABASE_URL%%\?*}"
-if [[ -z "$DATABASE_URL" ]]; then
-  echo "[backup] DATABASE_URL tidak ditemukan di $ENVFILE" >&2
+# Kredensial dari root .env (stack Docker).
+gv() { grep -E "^$1=" "$ENVFILE" 2>/dev/null | head -1 | cut -d= -f2- || true; }
+PGUSER="$(gv POSTGRES_USER)"; PGPASS="$(gv POSTGRES_PASSWORD)"; PGDB="$(gv POSTGRES_DB)"
+MINIO_KEY="$(gv MINIO_ACCESS_KEY)"; MINIO_SECRET="$(gv MINIO_SECRET_KEY)"; MINIO_BUCKET="$(gv MINIO_BUCKET)"
+: "${PGUSER:=axon}"; : "${PGDB:=axon_db}"; : "${MINIO_BUCKET:=axon-assets}"
+if [[ -z "$PGPASS" ]]; then
+  echo "[backup] POSTGRES_PASSWORD tidak ditemukan di $ENVFILE" >&2
   exit 1
 fi
 
@@ -51,11 +56,15 @@ TS="$(date +%Y%m%d-%H%M%S)"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
-echo "[backup] pg_dump…"
-"$PGDUMP" "$DATABASE_URL" > "$WORK/db.sql"
+echo "[backup] pg_dump (Postgres Docker via loopback)…"
+PGPASSWORD="$PGPASS" "$PGDUMP" -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDB" > "$WORK/db.sql"
 
-echo "[backup] arsip miniodata…"
-tar -C "$BASE" -czf "$WORK/miniodata.tar.gz" miniodata
+echo "[backup] arsip objek MinIO (Docker via mc)…"
+"$MC" alias set axbak "$MINIO_ENDPOINT" "$MINIO_KEY" "$MINIO_SECRET" >/dev/null 2>&1 || true
+mkdir -p "$WORK/miniodata"
+"$MC" mirror --overwrite "axbak/$MINIO_BUCKET" "$WORK/miniodata/$MINIO_BUCKET" >/dev/null 2>&1 || true
+tar -C "$WORK" -czf "$WORK/miniodata.tar.gz" miniodata
+rm -rf "$WORK/miniodata"
 
 cp "$ENVFILE" "$WORK/env.backup"
 

@@ -14,7 +14,7 @@ name: axon-ryzr-dev
 
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:18-alpine
     container_name: axon-ryzr-dev-postgres
     restart: unless-stopped
     environment:
@@ -24,7 +24,7 @@ services:
     ports:
       - '${DEV_PG_PORT:-55432}:5432'
     volumes:
-      - dev_postgres_data:/var/lib/postgresql/data
+      - dev_postgres_data:/var/lib/postgresql
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-axon} -d ${POSTGRES_DB:-axon_db}']
       interval: 10s

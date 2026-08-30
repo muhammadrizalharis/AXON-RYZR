@@ -4,8 +4,8 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Needed by some native deps (argon2)
-RUN apk add --no-cache python3 make g++
+# Needed by some native deps (argon2) + openssl for Prisma engines
+RUN apk add --no-cache python3 make g++ openssl
 
 COPY package*.json ./
 COPY prisma ./prisma
@@ -20,6 +20,9 @@ RUN npm prune --omit=dev
 FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
+
+# Prisma on Alpine (musl) needs openssl/libssl for its query+schema engines
+RUN apk add --no-cache openssl
 
 RUN addgroup -S nodejs && adduser -S nestjs -G nodejs
 
