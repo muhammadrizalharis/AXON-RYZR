@@ -14,17 +14,18 @@ import {
   AspectRatio,
   GenerationStyle,
   ImageResolution,
+  MAX_PROMPT_LENGTH,
 } from '../generation.presets';
 
 export class CreateVideoDto {
   @IsString()
   @MinLength(3)
-  @MaxLength(2000)
+  @MaxLength(MAX_PROMPT_LENGTH)
   prompt!: string;
 
   @IsOptional()
   @IsString()
-  @MaxLength(2000)
+  @MaxLength(MAX_PROMPT_LENGTH)
   negativePrompt?: string;
 
   @IsOptional()

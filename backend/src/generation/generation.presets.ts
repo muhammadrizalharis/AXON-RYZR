@@ -1,3 +1,6 @@
+// Batas panjang prompt (karakter) — dinaikkan dari 2000 agar muat prompt panjang & rinci.
+export const MAX_PROMPT_LENGTH = 8000;
+
 export enum AspectRatio {
   SQUARE = '1:1',
   LANDSCAPE_16_9 = '16:9',

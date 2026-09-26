@@ -89,6 +89,9 @@ const SURPRISE_PROMPTS = [
   'Portrait of a robot artist painting a self-portrait, dramatic studio light',
 ];
 
+// Selaras dengan @MaxLength(MAX_PROMPT_LENGTH) di DTO backend.
+const MAX_PROMPT_LENGTH = 8000;
+
 export function GenerationPanel() {
   const prompt = useDraftStore((s) => s.prompt);
   const setPrompt = useDraftStore((s) => s.setPrompt);
@@ -270,8 +273,14 @@ export function GenerationPanel() {
             {listening ? 'Listening…' : 'Voice'}
           </button>
         )}
-        <span className="ml-auto font-mono text-[10px] tracking-wider text-muted-foreground">
-          {prompt.length} chars · ≈ {batchSize} credit{batchSize > 1 ? 's' : ''}
+        <span
+          className={cn(
+            'ml-auto font-mono text-[10px] tracking-wider',
+            prompt.length > MAX_PROMPT_LENGTH ? 'text-red-400' : 'text-muted-foreground',
+          )}
+        >
+          {prompt.length.toLocaleString()} / {MAX_PROMPT_LENGTH.toLocaleString()} chars · ≈{' '}
+          {batchSize} credit{batchSize > 1 ? 's' : ''}
         </span>
       </div>
 
