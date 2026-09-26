@@ -39,6 +39,13 @@ export interface ComfyuiConfig {
   audioEnabled: boolean;
 }
 
+export interface OllamaConfig {
+  baseUrl: string;
+  model: string;
+  enabled: boolean;
+  timeoutMs: number;
+}
+
 export interface QuotaConfig {
   defaultUserCredits: number;
   imageCreditCost: number;
@@ -58,6 +65,7 @@ export interface Configuration {
   redis: RedisConfig;
   minio: MinioConfig;
   comfyui: ComfyuiConfig;
+  ollama: OllamaConfig;
   quota: QuotaConfig;
   throttle: ThrottleConfig;
 }
@@ -114,6 +122,12 @@ export default (): Configuration => ({
     pollIntervalMs: toNumber(process.env.COMFYUI_POLL_INTERVAL_MS, 1500),
     videoEnabled: toBool(process.env.COMFYUI_VIDEO_ENABLED, false),
     audioEnabled: toBool(process.env.COMFYUI_AUDIO_ENABLED, false),
+  },
+  ollama: {
+    baseUrl: process.env.OLLAMA_BASE_URL ?? 'http://host.docker.internal:11434',
+    model: process.env.OLLAMA_MODEL ?? 'qwen2.5:7b-instruct',
+    enabled: toBool(process.env.OLLAMA_ENABLED, false),
+    timeoutMs: toNumber(process.env.OLLAMA_TIMEOUT_MS, 15000),
   },
   quota: {
     defaultUserCredits: toNumber(process.env.DEFAULT_USER_CREDITS, 100),

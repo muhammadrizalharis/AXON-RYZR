@@ -44,4 +44,5 @@ export interface GenerationParams {
   // presentation metadata
   aspectRatio?: string;
   style?: string;
+  originalPrompt?: string;
 }

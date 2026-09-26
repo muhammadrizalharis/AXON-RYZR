@@ -122,6 +122,10 @@ services:
       JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-15m}
       JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-7d}
       JOB_CONCURRENCY: ${JOB_CONCURRENCY:-2}
+      OLLAMA_ENABLED: ${OLLAMA_ENABLED:-false}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:7b-instruct}
+      OLLAMA_TIMEOUT_MS: ${OLLAMA_TIMEOUT_MS:-40000}
     healthcheck:
       test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:4000/api/health']
       interval: 15s
@@ -131,6 +135,8 @@ services:
     ports:
       - '127.0.0.1:${API_PORT:-4200}:4000'
     networks: [axon-net]
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
 
   web:
     build:

@@ -19,6 +19,7 @@ import {
   GenerationJobData,
   GenerationParams,
 } from './jobs.constants';
+import { PromptIntelligenceService } from '../prompt-intelligence/prompt-intelligence.service';
 
 @Processor(GENERATION_QUEUE, {
   concurrency: Number(process.env.JOB_CONCURRENCY) || 2,
@@ -32,6 +33,7 @@ export class JobsProcessor extends WorkerHost {
     private readonly users: UsersService,
     private readonly comfyui: ComfyuiService,
     private readonly realtime: RealtimeGateway,
+    private readonly promptIntel: PromptIntelligenceService,
   ) {
     super();
   }
@@ -49,7 +51,8 @@ export class JobsProcessor extends WorkerHost {
         return;
       }
 
-      const workflow = this.buildWorkflow(type, prompt, negativePrompt, params);
+      const renderPrompt = await this.enhancePrompt(type, prompt, params);
+      const workflow = this.buildWorkflow(type, renderPrompt, negativePrompt, params);
 
       let lastEmitted = -1;
       const outputs = await this.comfyui.runWorkflow(
@@ -96,6 +99,28 @@ export class JobsProcessor extends WorkerHost {
       select: { status: true },
     });
     return row?.status === JobStatus.CANCELLED;
+  }
+
+  /** Image/video: enrich the user's brief via the local LLM; falls back to the stored prompt. */
+  private async enhancePrompt(
+    type: JobType,
+    storedPrompt: string,
+    params: GenerationParams,
+  ): Promise<string> {
+    if (type === JobType.AUDIO) return storedPrompt;
+    const raw = params.originalPrompt ?? storedPrompt;
+    const kind = type === JobType.VIDEO ? 'video' : 'image';
+    const result = await this.promptIntel.enhance(raw, kind, {
+      style: params.style,
+      aspectRatio: params.aspectRatio,
+    });
+    if (result.enhanced) {
+      this.logger.log(
+        `Prompt enhanced (${kind}): ${raw.length}\u2192${result.text.length} chars`,
+      );
+      return result.text;
+    }
+    return storedPrompt;
   }
 
   private buildWorkflow(

@@ -68,7 +68,7 @@ export class GenerationService {
       type: JobType.IMAGE,
       prompt: applyStyle(dto.prompt, dto.style ?? GenerationStyle.NONE),
       negativePrompt: dto.negativePrompt,
-      params,
+      params: { ...params, originalPrompt: dto.prompt },
       cost,
       projectId: dto.projectId,
     });
@@ -109,7 +109,7 @@ export class GenerationService {
       type: JobType.VIDEO,
       prompt: applyStyle(dto.prompt, dto.style ?? GenerationStyle.NONE),
       negativePrompt: dto.negativePrompt,
-      params,
+      params: { ...params, originalPrompt: dto.prompt },
       cost,
       projectId: dto.projectId,
     });
