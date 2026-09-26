@@ -105,7 +105,7 @@ export function buildTextToAudioWorkflow(
       class_type: 'SaveAudioMP3',
       inputs: {
         audio: ['decode', 0],
-        filename_prefix: 'AXON',
+        filename_prefix: `AXON_${seed}`,
         quality: 'V0',
       },
     },

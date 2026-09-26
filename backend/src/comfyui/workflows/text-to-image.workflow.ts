@@ -123,7 +123,7 @@ export function buildTextToImageWorkflow(
     },
     save: {
       class_type: 'SaveImage',
-      inputs: { images: ['decode', 0], filename_prefix: 'AXON' },
+      inputs: { images: ['decode', 0], filename_prefix: `AXON_${seed}` },
     },
   };
 

@@ -162,7 +162,7 @@ export function buildTextToVideoWorkflow(
       class_type: 'SaveVideo',
       inputs: {
         video: ['video', 0],
-        filename_prefix: 'AXON',
+        filename_prefix: `AXON_${seed}`,
         format: 'mp4',
         codec: 'h264',
       },
