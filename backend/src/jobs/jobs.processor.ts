@@ -20,6 +20,7 @@ import {
   GenerationParams,
 } from './jobs.constants';
 import { PromptIntelligenceService } from '../prompt-intelligence/prompt-intelligence.service';
+import { TextVerificationService } from '../text-verification/text-verification.service';
 
 @Processor(GENERATION_QUEUE, {
   concurrency: Number(process.env.JOB_CONCURRENCY) || 2,
@@ -34,6 +35,7 @@ export class JobsProcessor extends WorkerHost {
     private readonly comfyui: ComfyuiService,
     private readonly realtime: RealtimeGateway,
     private readonly promptIntel: PromptIntelligenceService,
+    private readonly textVerify: TextVerificationService,
   ) {
     super();
   }
@@ -52,29 +54,18 @@ export class JobsProcessor extends WorkerHost {
       }
 
       const renderPrompt = await this.enhancePrompt(type, prompt, params);
-      const workflow = this.buildWorkflow(type, renderPrompt, negativePrompt, params);
 
-      let lastEmitted = -1;
-      const outputs = await this.comfyui.runWorkflow(
-        workflow,
-        async (p) => {
-          // Throttle DB writes/socket emits to meaningful progress steps.
-          if (p - lastEmitted >= 5 || p === 100) {
-            lastEmitted = p;
-            await this.updateProgress(jobId, userId, type, p);
-          }
-        },
-        async (promptId) => {
-          // Track the ComfyUI prompt so a user cancel can interrupt the GPU.
-          await this.prisma.job.update({
-            where: { id: jobId },
-            data: { comfyPromptId: promptId },
-          });
-        },
+      const outputs = await this.renderWithVerification(
+        jobId,
+        userId,
+        type,
+        renderPrompt,
+        negativePrompt,
+        params,
       );
 
       // The user may have cancelled while the render was finishing.
-      if (await this.isCancelled(jobId)) {
+      if (outputs === null || (await this.isCancelled(jobId))) {
         this.logger.log(`Job ${jobId} cancelled — discarding outputs`);
         return;
       }
@@ -84,7 +75,10 @@ export class JobsProcessor extends WorkerHost {
       await this.markCompleted(jobId, userId, type, assets);
       this.logger.log(`Job ${jobId} completed with ${assets.length} asset(s)`);
     } catch (err) {
-      if (err instanceof ComfyInterruptedError || (await this.isCancelled(jobId))) {
+      if (
+        err instanceof ComfyInterruptedError ||
+        (await this.isCancelled(jobId))
+      ) {
         this.logger.log(`Job ${jobId} cancelled by user — no retry`);
         return; // do not mark FAILED, do not refund again, do not retry
       }
@@ -121,6 +115,126 @@ export class JobsProcessor extends WorkerHost {
       return result.text;
     }
     return storedPrompt;
+  }
+
+  /**
+   * Renders the job, optionally running the Fase 3 text-accuracy loop: read the
+   * text actually rendered (OCR) and, if a required literal is wrong/missing,
+   * re-render with a reinforced prompt + fresh seed (up to maxAttempts). Fails
+   * SOFT at every step — any issue keeps the best render so far. Returns null
+   * only when the user cancelled mid-render.
+   */
+  private async renderWithVerification(
+    jobId: string,
+    userId: string,
+    type: JobType,
+    renderPrompt: string,
+    negativePrompt: string | undefined,
+    params: GenerationParams,
+  ): Promise<ComfyOutputFile[] | null> {
+    const verifyOn =
+      (type === JobType.IMAGE || type === JobType.VIDEO) &&
+      (params.verifyText ?? this.textVerify.defaultEnabled) &&
+      this.textVerify.available;
+
+    if (!verifyOn) {
+      return this.runRender(
+        jobId,
+        userId,
+        type,
+        this.buildWorkflow(type, renderPrompt, negativePrompt, params),
+      );
+    }
+
+    const required = await this.textVerify.extractRequiredText(
+      params.originalPrompt ?? '',
+      renderPrompt,
+    );
+    const extra = required.length ? this.textVerify.maxAttempts : 0;
+    let best: { outputs: ComfyOutputFile[]; missing: number } | null = null;
+
+    for (let attempt = 0; attempt <= extra; attempt++) {
+      const seed = (params.seed ?? 0) + attempt * 101;
+      const prompt =
+        attempt > 0
+          ? this.textVerify.reinforce(renderPrompt, required)
+          : renderPrompt;
+      const outputs = await this.runRender(
+        jobId,
+        userId,
+        type,
+        this.buildWorkflow(type, prompt, negativePrompt, { ...params, seed }),
+      );
+
+      if (await this.isCancelled(jobId)) return null;
+      if (!required.length) return outputs; // nothing to verify
+
+      const sample = await this.sampleForOcr(type, outputs);
+      const ocr = sample ? await this.textVerify.readImageText(sample) : null;
+      if (ocr === null) {
+        this.logger.warn(
+          `Job ${jobId}: text verification unavailable — keeping render`,
+        );
+        return outputs;
+      }
+
+      const { missing, ok } = this.textVerify.scoreText(required, ocr);
+      this.logger.log(
+        `Job ${jobId} text verify attempt ${attempt}: ` +
+          `${required.length - missing.length}/${required.length} literal(s) OK`,
+      );
+      if (ok) return outputs;
+      if (!best || missing.length < best.missing) {
+        best = { outputs, missing: missing.length };
+      }
+    }
+
+    return best?.outputs ?? null;
+  }
+
+  /** Runs one ComfyUI render, wiring progress throttling + cancel tracking. */
+  private async runRender(
+    jobId: string,
+    userId: string,
+    type: JobType,
+    workflow: Record<string, unknown>,
+  ): Promise<ComfyOutputFile[]> {
+    let lastEmitted = -1;
+    return this.comfyui.runWorkflow(
+      workflow,
+      async (p) => {
+        // Throttle DB writes/socket emits to meaningful progress steps.
+        if (p - lastEmitted >= 5 || p === 100) {
+          lastEmitted = p;
+          await this.updateProgress(jobId, userId, type, p);
+        }
+      },
+      async (promptId) => {
+        // Track the ComfyUI prompt so a user cancel can interrupt the GPU.
+        await this.prisma.job.update({
+          where: { id: jobId },
+          data: { comfyPromptId: promptId },
+        });
+      },
+    );
+  }
+
+  /** Picks the buffer to OCR: the image itself, or a frame extracted from video. */
+  private async sampleForOcr(
+    type: JobType,
+    outputs: ComfyOutputFile[],
+  ): Promise<Buffer | null> {
+    if (type === JobType.IMAGE) {
+      return (
+        outputs.find((o) => o.mimeType.startsWith('image/'))?.buffer ?? null
+      );
+    }
+    if (type === JobType.VIDEO) {
+      const vid = outputs.find((o) => o.mimeType.startsWith('video/'));
+      if (!vid) return null;
+      return this.textVerify.extractVideoFrame(vid.buffer, vid.filename);
+    }
+    return null;
   }
 
   private buildWorkflow(

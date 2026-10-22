@@ -126,6 +126,11 @@ services:
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:7b-instruct}
       OLLAMA_TIMEOUT_MS: ${OLLAMA_TIMEOUT_MS:-40000}
+      TEXT_VERIFY_ENABLED: ${TEXT_VERIFY_ENABLED:-false}
+      TEXT_VERIFY_MODEL: ${TEXT_VERIFY_MODEL:-qwen2.5vl:latest}
+      TEXT_VERIFY_MAX_ATTEMPTS: ${TEXT_VERIFY_MAX_ATTEMPTS:-1}
+      TEXT_VERIFY_OCR_TIMEOUT_MS: ${TEXT_VERIFY_OCR_TIMEOUT_MS:-240000}
+      TEXT_VERIFY_KEEPALIVE: ${TEXT_VERIFY_KEEPALIVE:-10m}
     healthcheck:
       test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:4000/api/health']
       interval: 15s

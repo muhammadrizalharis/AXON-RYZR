@@ -1,6 +1,7 @@
 import {
   IsEnum,
   IsInt,
+  IsBoolean,
   IsNumber,
   IsOptional,
   IsString,
@@ -62,6 +63,10 @@ export class CreateVideoDto {
   @IsInt()
   @Min(0)
   seed?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  verifyText?: boolean;
 
   @IsOptional()
   @IsUUID()

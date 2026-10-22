@@ -1,6 +1,7 @@
 import {
   IsEnum,
   IsInt,
+  IsBoolean,
   IsOptional,
   IsString,
   IsUUID,
@@ -55,6 +56,10 @@ export class CreateImageDto {
   @IsInt()
   @Min(0)
   seed?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  verifyText?: boolean;
 
   @IsOptional()
   @IsUUID()

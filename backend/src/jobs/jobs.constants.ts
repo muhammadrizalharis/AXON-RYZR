@@ -45,4 +45,6 @@ export interface GenerationParams {
   aspectRatio?: string;
   style?: string;
   originalPrompt?: string;
+  // Fase 3 — opt-in text accuracy (OCR verify + corrective re-render)
+  verifyText?: boolean;
 }

@@ -21,8 +21,9 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
-# Prisma on Alpine (musl) needs openssl/libssl for its query+schema engines
-RUN apk add --no-cache openssl
+# Prisma on Alpine (musl) needs openssl/libssl for its query+schema engines.
+# ffmpeg is used to extract a still frame from videos for text verification (Fase 3).
+RUN apk add --no-cache openssl ffmpeg
 
 RUN addgroup -S nodejs && adduser -S nestjs -G nodejs
 

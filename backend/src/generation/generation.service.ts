@@ -61,6 +61,7 @@ export class GenerationService {
       batchSize,
       aspectRatio: dto.aspectRatio,
       style: dto.style,
+      verifyText: dto.verifyText,
     };
 
     return this.createJob({
@@ -102,6 +103,7 @@ export class GenerationService {
       frames: Math.max(1, Math.round(duration * fps)),
       aspectRatio: dto.aspectRatio,
       style: dto.style,
+      verifyText: dto.verifyText,
     };
 
     return this.createJob({

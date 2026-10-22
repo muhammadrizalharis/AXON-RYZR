@@ -46,6 +46,19 @@ export interface OllamaConfig {
   timeoutMs: number;
 }
 
+export interface TextVerifyConfig {
+  /** Global default used only when a request omits the per-job flag. Opt-in: off. */
+  enabled: boolean;
+  /** Vision model used to read the text actually rendered on an image/frame. */
+  model: string;
+  /** Extra re-renders attempted when the text is wrong (beyond the first render). */
+  maxAttempts: number;
+  /** Hard timeout for one OCR read; on timeout the current render is kept. */
+  ocrTimeoutMs: number;
+  /** keep_alive sent to Ollama so the vision model stays warm between reads. */
+  keepAlive: string;
+}
+
 export interface QuotaConfig {
   defaultUserCredits: number;
   imageCreditCost: number;
@@ -66,6 +79,7 @@ export interface Configuration {
   minio: MinioConfig;
   comfyui: ComfyuiConfig;
   ollama: OllamaConfig;
+  textVerify: TextVerifyConfig;
   quota: QuotaConfig;
   throttle: ThrottleConfig;
 }
@@ -128,6 +142,13 @@ export default (): Configuration => ({
     model: process.env.OLLAMA_MODEL ?? 'qwen2.5:7b-instruct',
     enabled: toBool(process.env.OLLAMA_ENABLED, false),
     timeoutMs: toNumber(process.env.OLLAMA_TIMEOUT_MS, 15000),
+  },
+  textVerify: {
+    enabled: toBool(process.env.TEXT_VERIFY_ENABLED, false),
+    model: process.env.TEXT_VERIFY_MODEL ?? 'qwen2.5vl:latest',
+    maxAttempts: toNumber(process.env.TEXT_VERIFY_MAX_ATTEMPTS, 1),
+    ocrTimeoutMs: toNumber(process.env.TEXT_VERIFY_OCR_TIMEOUT_MS, 240000),
+    keepAlive: process.env.TEXT_VERIFY_KEEPALIVE ?? '10m',
   },
   quota: {
     defaultUserCredits: toNumber(process.env.DEFAULT_USER_CREDITS, 100),
