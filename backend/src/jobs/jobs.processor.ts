@@ -13,6 +13,7 @@ import {
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { buildTextToImageWorkflow } from '../comfyui/workflows/text-to-image.workflow';
 import { buildTextToVideoWorkflow } from '../comfyui/workflows/text-to-video.workflow';
+import { buildLtxVideoWorkflow } from '../comfyui/workflows/text-to-video-ltx.workflow';
 import { buildTextToAudioWorkflow } from '../comfyui/workflows/text-to-audio.workflow';
 import {
   GENERATION_QUEUE,
@@ -392,6 +393,27 @@ export class JobsProcessor extends WorkerHost {
       const fps = params.fps ?? 24;
       const frames =
         params.frames ?? Math.max(1, Math.round((params.duration ?? 5) * fps));
+
+      // Engine select: LTX-2 22B (high quality, default) or Wan 2.2 5B.
+      const engine = (process.env.COMFYUI_VIDEO_ENGINE ?? 'ltx').toLowerCase();
+      if (engine !== 'wan') {
+        const ltxSteps = Number(process.env.COMFYUI_LTX_STEPS) || 25;
+        const ltxCfg = Number(process.env.COMFYUI_LTX_CFG) || 3;
+        return buildLtxVideoWorkflow({
+          prompt,
+          negativePrompt,
+          width: params.width,
+          height: params.height,
+          steps: params.steps && params.steps >= 10 ? params.steps : ltxSteps,
+          cfg: ltxCfg,
+          seed: params.seed,
+          frames,
+          fps,
+          samplerName: params.samplerName,
+          startImageName,
+        });
+      }
+
       return buildTextToVideoWorkflow({
         prompt,
         negativePrompt,
