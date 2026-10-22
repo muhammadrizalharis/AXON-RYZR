@@ -11,11 +11,14 @@ import {
   Dices,
   Mic,
   MicOff,
+  Upload,
+  X,
 } from 'lucide-react';
 import {
   AspectRatio,
   GenerationStyle,
   ImageResolution,
+  AssetType,
 } from '@axon-ryzr/shared';
 import {
   Select,
@@ -29,6 +32,7 @@ import {
   useGenerateImage,
   useGenerateVideo,
 } from '@/features/generation/use-generate';
+import { useGallery } from '@/features/gallery/use-gallery';
 import { useDraftStore } from '@/store/draft-store';
 import { cn } from '@/lib/utils';
 
@@ -114,6 +118,14 @@ export function GenerationPanel() {
   const [musicDuration, setMusicDuration] = useState(60);
   const [advanced, setAdvanced] = useState(false);
   const [model, setModel] = useState<'aura' | 'genesis'>('aura');
+  // Video: image-to-video source frame (base64 data URL) + music options.
+  const [sourceImage, setSourceImage] = useState<string | null>(null);
+  const [withMusic, setWithMusic] = useState(false);
+  const [musicSource, setMusicSource] = useState<'auto' | 'existing'>('auto');
+  const [videoMusicPrompt, setVideoMusicPrompt] = useState('');
+  const [videoMusicDuration, setVideoMusicDuration] = useState(10);
+  const [audioJobId, setAudioJobId] = useState('');
+  const audioAssets = useGallery({ type: AssetType.AUDIO, take: 50 });
   const [listening, setListening] = useState(false);
   const [voiceSupported, setVoiceSupported] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -198,6 +210,16 @@ export function GenerationPanel() {
 
   const submitVideo = () => {
     if (!canSubmit) return;
+    const musicFields =
+      withMusic && musicSource === 'existing' && audioJobId
+        ? { audioJobId }
+        : withMusic
+          ? {
+              music: true,
+              musicPrompt: videoMusicPrompt.trim() || undefined,
+              musicDuration: videoMusicDuration,
+            }
+          : {};
     generateVideo.mutate({
       prompt,
       negativePrompt: negativePrompt || undefined,
@@ -207,7 +229,18 @@ export function GenerationPanel() {
       duration,
       fps,
       steps: videoSteps,
+      sourceImage: sourceImage || undefined,
+      ...musicFields,
     });
+  };
+
+  const onPickSourceImage = (file: File | undefined) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) return;
+    if (file.size > 12 * 1024 * 1024) return;
+    const reader = new FileReader();
+    reader.onload = () => setSourceImage(reader.result as string);
+    reader.readAsDataURL(file);
   };
 
   const submitAudio = () => {
@@ -487,6 +520,133 @@ export function GenerationPanel() {
                 className={numberCls}
               />
             </div>
+          </div>
+
+          <div className="rounded-xl border border-cyan/20 bg-cyan/5 p-3">
+            <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest text-cyan">
+              <Film className="h-3.5 w-3.5" /> Video: Image-to-Video &amp; Musik
+            </p>
+
+            <label className={labelCls}>
+              Animasikan gambar (opsional — kosong = text-to-video)
+            </label>
+            {sourceImage ? (
+              <div className="mb-2 flex items-center gap-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={sourceImage}
+                  alt="start frame"
+                  className="h-16 w-16 rounded-lg border border-cyan/30 object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => setSourceImage(null)}
+                  className="flex items-center gap-1 rounded-lg border border-border/60 px-2 py-1 text-xs text-muted-foreground transition hover:text-foreground"
+                >
+                  <X className="h-3.5 w-3.5" /> Hapus
+                </button>
+              </div>
+            ) : (
+              <label className="mb-2 flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-cyan/30 bg-background/40 px-3 py-2 text-sm text-muted-foreground transition hover:border-cyan/60 hover:text-foreground">
+                <Upload className="h-4 w-4" />
+                Pilih gambar untuk dianimasikan
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => onPickSourceImage(e.target.files?.[0])}
+                />
+              </label>
+            )}
+
+            <label className="mt-2 flex items-center gap-2 text-sm text-foreground">
+              <input
+                type="checkbox"
+                checked={withMusic}
+                onChange={(e) => setWithMusic(e.target.checked)}
+                className="h-4 w-4 accent-cyan"
+              />
+              Tambahkan musik ke video
+            </label>
+
+            {withMusic && (
+              <div className="mt-2 space-y-2">
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setMusicSource('auto')}
+                    className={cn(
+                      'rounded-lg border px-3 py-1.5 text-xs transition',
+                      musicSource === 'auto'
+                        ? 'border-cyan/60 bg-cyan/10 text-foreground'
+                        : 'border-border/60 text-muted-foreground',
+                    )}
+                  >
+                    Buat musik baru
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMusicSource('existing')}
+                    className={cn(
+                      'rounded-lg border px-3 py-1.5 text-xs transition',
+                      musicSource === 'existing'
+                        ? 'border-cyan/60 bg-cyan/10 text-foreground'
+                        : 'border-border/60 text-muted-foreground',
+                    )}
+                  >
+                    Pakai audio yang ada
+                  </button>
+                </div>
+
+                {musicSource === 'auto' ? (
+                  <div className="grid gap-3 sm:grid-cols-[1fr_140px]">
+                    <div>
+                      <label className={labelCls}>
+                        Gaya musik (opsional — default dari prompt)
+                      </label>
+                      <input
+                        type="text"
+                        value={videoMusicPrompt}
+                        onChange={(e) => setVideoMusicPrompt(e.target.value)}
+                        placeholder="mis. cinematic, epic, orchestral"
+                        className={numberCls}
+                      />
+                    </div>
+                    <div>
+                      <label className={labelCls}>Durasi musik (s)</label>
+                      <input
+                        type="number"
+                        min={5}
+                        max={180}
+                        value={videoMusicDuration}
+                        onChange={(e) =>
+                          setVideoMusicDuration(Number(e.target.value))
+                        }
+                        className={numberCls}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <label className={labelCls}>Pilih audio dari galeri</label>
+                    <select
+                      value={audioJobId}
+                      onChange={(e) => setAudioJobId(e.target.value)}
+                      className={numberCls}
+                    >
+                      <option value="">— pilih audio —</option>
+                      {(audioAssets.data?.items ?? [])
+                        .filter((a) => a.jobId)
+                        .map((a) => (
+                          <option key={a.id} value={a.jobId as string}>
+                            {a.job?.prompt?.slice(0, 48) || a.id.slice(0, 8)}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="rounded-xl border border-accent/20 bg-accent/5 p-3">

@@ -188,6 +188,16 @@ export interface CreateVideoPayload {
   fps?: number;
   steps?: number;
   seed?: number;
+  /** Base64 (data URL or raw) start frame to animate — image-to-video. */
+  sourceImage?: string;
+  /** Attach a music track to the output video. */
+  music?: boolean;
+  /** Style/genre brief for auto-generated music; defaults to the main prompt. */
+  musicPrompt?: string;
+  /** Length of auto-generated music in seconds. */
+  musicDuration?: number;
+  /** Use an existing AUDIO job's track instead of generating new music. */
+  audioJobId?: string;
   projectId?: string;
 }
 

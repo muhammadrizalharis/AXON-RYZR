@@ -21,6 +21,7 @@ import {
 } from './jobs.constants';
 import { PromptIntelligenceService } from '../prompt-intelligence/prompt-intelligence.service';
 import { TextVerificationService } from '../text-verification/text-verification.service';
+import { MediaService } from '../media/media.service';
 
 @Processor(GENERATION_QUEUE, {
   concurrency: Number(process.env.JOB_CONCURRENCY) || 2,
@@ -36,6 +37,7 @@ export class JobsProcessor extends WorkerHost {
     private readonly realtime: RealtimeGateway,
     private readonly promptIntel: PromptIntelligenceService,
     private readonly textVerify: TextVerificationService,
+    private readonly media: MediaService,
   ) {
     super();
   }
@@ -70,7 +72,19 @@ export class JobsProcessor extends WorkerHost {
         return;
       }
 
-      const assets = await this.persistOutputs(userId, jobId, type, outputs);
+      const finalOutputs = await this.applyMusicIfRequested(
+        jobId,
+        type,
+        params,
+        outputs,
+      );
+
+      const assets = await this.persistOutputs(
+        userId,
+        jobId,
+        type,
+        finalOutputs,
+      );
 
       await this.markCompleted(jobId, userId, type, assets);
       this.logger.log(`Job ${jobId} completed with ${assets.length} asset(s)`);
@@ -138,14 +152,22 @@ export class JobsProcessor extends WorkerHost {
       this.textVerify.available;
 
     if (!verifyOn) {
+      const startImageName = await this.prepareStartImage(type, params);
       return this.runRender(
         jobId,
         userId,
         type,
-        this.buildWorkflow(type, renderPrompt, negativePrompt, params),
+        this.buildWorkflow(
+          type,
+          renderPrompt,
+          negativePrompt,
+          params,
+          startImageName,
+        ),
       );
     }
 
+    const startImageName = await this.prepareStartImage(type, params);
     const required = await this.textVerify.extractRequiredText(
       params.originalPrompt ?? '',
       renderPrompt,
@@ -163,7 +185,13 @@ export class JobsProcessor extends WorkerHost {
         jobId,
         userId,
         type,
-        this.buildWorkflow(type, prompt, negativePrompt, { ...params, seed }),
+        this.buildWorkflow(
+          type,
+          prompt,
+          negativePrompt,
+          { ...params, seed },
+          startImageName,
+        ),
       );
 
       if (await this.isCancelled(jobId)) return null;
@@ -237,11 +265,128 @@ export class JobsProcessor extends WorkerHost {
     return null;
   }
 
+  /**
+   * Image-to-video: downloads the user's uploaded start frame from storage and
+   * uploads it into ComfyUI, returning the LoadImage reference. Fails SOFT —
+   * on any problem returns undefined so the job falls back to pure text-to-video.
+   */
+  private async prepareStartImage(
+    type: JobType,
+    params: GenerationParams,
+  ): Promise<string | undefined> {
+    if (type !== JobType.VIDEO || !params.sourceImageKey) return undefined;
+    try {
+      const buffer = await this.storage.getObjectBuffer(params.sourceImageKey);
+      const name = await this.comfyui.uploadImage(
+        buffer,
+        params.sourceImageKey.split('/').pop() || 'i2v-source.png',
+      );
+      if (!name) {
+        this.logger.warn('I2V: ComfyUI image upload returned no name — T2V');
+        return undefined;
+      }
+      this.logger.log(`I2V: animating from uploaded start frame (${name})`);
+      return name;
+    } catch (err) {
+      this.logger.warn(
+        `I2V: failed to prepare start image — falling back to T2V: ${
+          (err as Error).message
+        }`,
+      );
+      return undefined;
+    }
+  }
+
+  /**
+   * Attaches a music track to a rendered video (image-to-video or text-to-
+   * video). Source is either an existing AUDIO job or a freshly generated
+   * ACE-Step track. Fails SOFT — on any problem the silent video is kept.
+   */
+  private async applyMusicIfRequested(
+    jobId: string,
+    type: JobType,
+    params: GenerationParams,
+    outputs: ComfyOutputFile[],
+  ): Promise<ComfyOutputFile[]> {
+    if (type !== JobType.VIDEO) return outputs;
+    if (!params.music && !params.musicAudioJobId) return outputs;
+
+    const video = outputs.find((o) => o.mimeType.startsWith('video/'));
+    if (!video) return outputs;
+
+    try {
+      const track = await this.resolveMusicTrack(jobId, params);
+      if (!track) return outputs;
+
+      const muxed = await this.media.muxAudioIntoVideo(
+        video.buffer,
+        video.filename,
+        track.buffer,
+        track.filename,
+      );
+      if (!muxed) {
+        this.logger.warn(`Job ${jobId}: mux failed — keeping silent video`);
+        return outputs;
+      }
+
+      this.logger.log(`Job ${jobId}: music track attached to video`);
+      return outputs.map((o) =>
+        o === video ? { ...video, buffer: muxed } : o,
+      );
+    } catch (err) {
+      this.logger.warn(
+        `Job ${jobId}: music attach failed — keeping silent video: ${
+          (err as Error).message
+        }`,
+      );
+      return outputs;
+    }
+  }
+
+  /** Returns the audio buffer to mux: existing job's track, or auto-generated. */
+  private async resolveMusicTrack(
+    jobId: string,
+    params: GenerationParams,
+  ): Promise<{ buffer: Buffer; filename: string } | null> {
+    if (params.musicAudioJobId) {
+      const asset = await this.prisma.asset.findFirst({
+        where: { jobId: params.musicAudioJobId, type: AssetType.AUDIO },
+        select: { storageKey: true },
+      });
+      if (!asset) {
+        this.logger.warn(`Job ${jobId}: referenced audio has no asset`);
+        return null;
+      }
+      const buffer = await this.storage.getObjectBuffer(asset.storageKey);
+      return {
+        buffer,
+        filename: asset.storageKey.split('/').pop() || 'music.mp3',
+      };
+    }
+
+    // Auto-generate a backing track with ACE-Step.
+    const workflow = buildTextToAudioWorkflow({
+      tags: params.musicPrompt || params.originalPrompt || 'cinematic, ambient',
+      seconds: params.musicSeconds ?? 60,
+      steps: 50,
+      cfg: 5,
+      seed: params.seed ?? 0,
+    });
+    const audioOutputs = await this.comfyui.runWorkflow(workflow);
+    const audio = audioOutputs.find((o) => o.mimeType.startsWith('audio/'));
+    if (!audio) {
+      this.logger.warn(`Job ${jobId}: music generation produced no audio`);
+      return null;
+    }
+    return { buffer: audio.buffer, filename: audio.filename };
+  }
+
   private buildWorkflow(
     type: JobType,
     prompt: string,
     negativePrompt: string | undefined,
     params: GenerationParams,
+    startImageName?: string,
   ): Record<string, unknown> {
     if (type === JobType.VIDEO) {
       const fps = params.fps ?? 24;
@@ -259,6 +404,7 @@ export class JobsProcessor extends WorkerHost {
         fps,
         samplerName: params.samplerName,
         scheduler: params.scheduler,
+        startImageName,
       });
     }
 

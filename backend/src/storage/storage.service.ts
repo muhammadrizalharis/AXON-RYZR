@@ -161,6 +161,16 @@ export class StorageService implements OnModuleInit {
     return this.client.getObject(this.config.bucket, storageKey);
   }
 
+  /** Reads a full object into a Buffer (used to source I2V images / audio). */
+  async getObjectBuffer(storageKey: string): Promise<Buffer> {
+    const stream = await this.client.getObject(this.config.bucket, storageKey);
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    }
+    return Buffer.concat(chunks);
+  }
+
   /** Streams a byte range of an object (HTTP Range support). */
   async getPartialObjectStream(
     storageKey: string,

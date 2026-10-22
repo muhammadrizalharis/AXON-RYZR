@@ -117,6 +117,34 @@ export class ComfyuiService {
     }
   }
 
+  /**
+   * Uploads a source image into ComfyUI's input folder (used as the start
+   * frame for image-to-video). Returns the reference LoadImage expects
+   * (`name` or `subfolder/name`), or null on failure.
+   */
+  async uploadImage(buffer: Buffer, filename: string): Promise<string | null> {
+    try {
+      const form = new FormData();
+      const blob = new Blob([new Uint8Array(buffer)]);
+      form.append('image', blob, filename);
+      form.append('overwrite', 'true');
+      const { data } = await this.http.post<{
+        name: string;
+        subfolder?: string;
+        type?: string;
+      }>('/upload/image', form, { timeout: 60_000 });
+      if (!data?.name) return null;
+      return data.subfolder ? `${data.subfolder}/${data.name}` : data.name;
+    } catch (err) {
+      const message =
+        axios.isAxiosError(err) && err.response
+          ? JSON.stringify(err.response.data)
+          : (err as Error).message;
+      this.logger.warn(`ComfyUI image upload failed: ${message}`);
+      return null;
+    }
+  }
+
   private async submitPrompt(
     workflow: Record<string, unknown>,
     clientId: string,

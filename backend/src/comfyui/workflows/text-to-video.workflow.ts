@@ -4,7 +4,7 @@
  * Matches the assets installed on the GPU node:
  *   UNETLoader(wan2.2_ti2v_5B_fp16) + CLIPLoader(umt5_xxl_fp8_e4m3fn_scaled, type=wan)
  *   + VAELoader(wan2.2_vae) -> ModelSamplingSD3(shift) -> CLIPTextEncode pos/neg
- *   -> Wan22ImageToVideoLatent (no start_image = pure T2V) -> KSampler
+ *   -> Wan22ImageToVideoLatent (optional start_image for image-to-video) -> KSampler
  *   -> VAEDecode -> CreateVideo -> SaveVideo (mp4/h264)
  *
  * Wan 2.2 constraints: dimensions in multiples of 32, frame count must be
@@ -41,6 +41,13 @@ export interface TextToVideoWorkflowParams {
   /** Wan VAE (models/vae). */
   vae?: string;
   shift?: number;
+  /**
+   * Optional start frame for image-to-video. When set, a LoadImage node is
+   * wired into Wan22ImageToVideoLatent.start_image so the clip animates from
+   * this image. The name must already exist in ComfyUI's input folder
+   * (uploaded via ComfyuiService.uploadImage).
+   */
+  startImageName?: string;
 }
 
 /** Snaps an arbitrary frame count to the nearest valid Wan value (4k+1). */
@@ -71,12 +78,10 @@ export function buildTextToVideoWorkflow(
     samplerName = envStr('COMFYUI_WAN_SAMPLER', 'uni_pc'),
     scheduler = envStr('COMFYUI_WAN_SCHEDULER', 'simple'),
     unet = envStr('COMFYUI_WAN_UNET', 'wan2.2_ti2v_5B_fp16.safetensors'),
-    clip = envStr(
-      'COMFYUI_WAN_CLIP',
-      'umt5_xxl_fp8_e4m3fn_scaled.safetensors',
-    ),
+    clip = envStr('COMFYUI_WAN_CLIP', 'umt5_xxl_fp8_e4m3fn_scaled.safetensors'),
     vae = envStr('COMFYUI_WAN_VAE', 'wan2.2_vae.safetensors'),
     shift = envNum('COMFYUI_WAN_SHIFT', 8),
+    startImageName,
   } = params;
 
   const length = snapWanFrames(frames);
@@ -100,7 +105,28 @@ export function buildTextToVideoWorkflow(
           inputs: { samples: ['sample', 0], vae: ['vae', 0] },
         };
 
+  const latentInputs: Record<string, unknown> = {
+    vae: ['vae', 0],
+    width,
+    height,
+    length,
+    batch_size: 1,
+  };
+  // Image-to-video: feed the uploaded start frame into the latent node.
+  const loadImageNode = startImageName
+    ? {
+        load_image: {
+          class_type: 'LoadImage',
+          inputs: { image: startImageName },
+        },
+      }
+    : {};
+  if (startImageName) {
+    latentInputs.start_image = ['load_image', 0];
+  }
+
   return {
+    ...loadImageNode,
     unet: {
       class_type: 'UNETLoader',
       inputs: { unet_name: unet, weight_dtype: 'default' },
@@ -130,13 +156,7 @@ export function buildTextToVideoWorkflow(
     },
     latent: {
       class_type: 'Wan22ImageToVideoLatent',
-      inputs: {
-        vae: ['vae', 0],
-        width,
-        height,
-        length,
-        batch_size: 1,
-      },
+      inputs: latentInputs,
     },
     sample: {
       class_type: 'KSampler',

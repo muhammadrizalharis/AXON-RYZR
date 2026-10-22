@@ -6,10 +6,11 @@ import {
   NotImplementedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { JobStatus, JobType, Prisma } from '@prisma/client';
+import { JobStatus, JobType, AssetType, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 import { JobsService } from '../jobs/jobs.service';
+import { StorageService } from '../storage/storage.service';
 import { ComfyuiConfig, QuotaConfig } from '../config/configuration';
 import { GenerationParams } from '../jobs/jobs.constants';
 import { serializeBigInt } from '../common/utils/serialize';
@@ -35,6 +36,7 @@ export class GenerationService {
     private readonly prisma: PrismaService,
     private readonly users: UsersService,
     private readonly jobs: JobsService,
+    private readonly storage: StorageService,
     config: ConfigService,
   ) {
     this.quota = config.getOrThrow<QuotaConfig>('quota');
@@ -82,7 +84,6 @@ export class GenerationService {
           'ComfyUI. Aktifkan lewat COMFYUI_VIDEO_ENABLED=true setelah tersedia.',
       );
     }
-    const cost = this.quota.videoCreditCost;
     const fps = dto.fps ?? 24;
     const duration = dto.duration ?? 5;
 
@@ -105,6 +106,38 @@ export class GenerationService {
       style: dto.style,
       verifyText: dto.verifyText,
     };
+
+    let cost = this.quota.videoCreditCost;
+
+    // Image-to-video: persist the uploaded start frame, reference it by key.
+    if (dto.sourceImage) {
+      const decoded = this.decodeImage(dto.sourceImage);
+      const uploaded = await this.storage.uploadBuffer(
+        userId,
+        decoded.buffer,
+        `i2v-source.${decoded.ext}`,
+        decoded.mime,
+      );
+      params.sourceImageKey = uploaded.storageKey;
+      await this.users.addStorageUsage(userId, uploaded.size);
+    }
+
+    // Music: attach an existing track, or auto-generate one (extra credits).
+    if (dto.audioJobId) {
+      await this.assertOwnedAudioJob(userId, dto.audioJobId);
+      params.musicAudioJobId = dto.audioJobId;
+    } else if (dto.music) {
+      if (!this.audioEnabled) {
+        throw new NotImplementedException(
+          'Musik otomatis belum tersedia: model ACE-Step belum terpasang di ' +
+            'ComfyUI. Aktifkan lewat COMFYUI_AUDIO_ENABLED=true setelah tersedia.',
+        );
+      }
+      params.music = true;
+      params.musicPrompt = dto.musicPrompt?.trim() || dto.prompt;
+      params.musicSeconds = dto.musicDuration ?? Math.ceil(duration);
+      cost += this.quota.audioCreditCost;
+    }
 
     return this.createJob({
       userId,
@@ -258,5 +291,55 @@ export class GenerationService {
   private randomSeed(): number {
     // 32-bit positive seed.
     return Math.floor(Math.random() * 2_147_483_647);
+  }
+
+  /** Decodes a base64 (data URL or raw) image into a buffer + mime/extension. */
+  private decodeImage(input: string): {
+    buffer: Buffer;
+    mime: string;
+    ext: string;
+  } {
+    const match = /^data:(image\/[a-zA-Z0-9.+-]+);base64,(.*)$/s.exec(
+      input.trim(),
+    );
+    const mime = match ? match[1] : 'image/png';
+    const b64 = match ? match[2] : input.trim();
+    let buffer: Buffer;
+    try {
+      buffer = Buffer.from(b64, 'base64');
+    } catch {
+      throw new BadRequestException('sourceImage bukan base64 yang valid');
+    }
+    if (buffer.length < 64) {
+      throw new BadRequestException('sourceImage kosong atau terlalu kecil');
+    }
+    if (buffer.length > 12 * 1024 * 1024) {
+      throw new BadRequestException('sourceImage terlalu besar (maks 12MB)');
+    }
+    const ext = mime.split('/')[1]?.toLowerCase() || 'png';
+    return { buffer, mime, ext };
+  }
+
+  /** Verifies the referenced audio job belongs to the user and has a track. */
+  private async assertOwnedAudioJob(
+    userId: string,
+    audioJobId: string,
+  ): Promise<void> {
+    const job = await this.prisma.job.findUnique({
+      where: { id: audioJobId },
+      select: { userId: true, type: true },
+    });
+    if (!job || job.userId !== userId || job.type !== JobType.AUDIO) {
+      throw new NotFoundException('Audio job tidak ditemukan');
+    }
+    const asset = await this.prisma.asset.findFirst({
+      where: { jobId: audioJobId, userId, type: AssetType.AUDIO },
+      select: { id: true },
+    });
+    if (!asset) {
+      throw new BadRequestException(
+        'Audio job belum punya hasil yang bisa dipakai',
+      );
+    }
   }
 }

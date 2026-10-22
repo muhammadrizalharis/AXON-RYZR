@@ -41,6 +41,13 @@ export interface GenerationParams {
   seconds?: number;
   lyrics?: string;
   lyricsStrength?: number;
+  // video: image-to-video source (MinIO key of the uploaded start frame)
+  sourceImageKey?: string;
+  // video: optional music track muxed into the output
+  music?: boolean;
+  musicPrompt?: string;
+  musicSeconds?: number;
+  musicAudioJobId?: string;
   // presentation metadata
   aspectRatio?: string;
   style?: string;

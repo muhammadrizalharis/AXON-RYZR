@@ -68,6 +68,35 @@ export class CreateVideoDto {
   @IsBoolean()
   verifyText?: boolean;
 
+  /** Base64 (data URL or raw) start frame to animate — image-to-video. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(15_000_000)
+  sourceImage?: string;
+
+  /** Attach a music track to the output video. */
+  @IsOptional()
+  @IsBoolean()
+  music?: boolean;
+
+  /** Style/genre brief for auto-generated music; defaults to the main prompt. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(MAX_PROMPT_LENGTH)
+  musicPrompt?: string;
+
+  /** Length of auto-generated music in seconds. */
+  @IsOptional()
+  @IsNumber()
+  @Min(5)
+  @Max(180)
+  musicDuration?: number;
+
+  /** Use an existing AUDIO job's track instead of generating new music. */
+  @IsOptional()
+  @IsUUID()
+  audioJobId?: string;
+
   @IsOptional()
   @IsUUID()
   projectId?: string;
