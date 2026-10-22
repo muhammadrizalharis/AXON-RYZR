@@ -1,7 +1,7 @@
 # ── AXON-RYZR — full stack orchestration ──
-# Isolated project namespace so it never collides with other apps (e.g. ComputeHub).
+# Isolated project namespace so it never collides with other apps on the same host.
 # Every container/volume/network is prefixed 'axon-ryzr' and uses a distinct port range.
-# Usage: cp .env.example .env && docker compose up -d --build
+# Usage: siapkan .env lalu jalankan: docker compose up -d --build
 
 name: axon-ryzr
 

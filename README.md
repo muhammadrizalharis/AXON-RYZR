@@ -144,7 +144,6 @@ AXON-RYZR/
 │   ├── nginx/                # Konfigurasi reverse proxy
 │   └── ...
 ├── docker-compose.yml        # Orkestrasi seluruh service
-├── .env.example              # Contoh environment variables
 └── README.md
 ```
 
@@ -170,8 +169,8 @@ cd AXON-RYZR
 
 ### 2. Siapkan environment
 ```bash
-cp .env.example .env
-# edit .env sesuai konfigurasi server
+# buat backend/.env (lihat contoh di bagian "Environment Variables" di bawah)
+# edit sesuai konfigurasi server
 ```
 
 ### 3. Jalankan seluruh stack (produksi)
@@ -227,80 +226,26 @@ npm run dev
 
 ---
 
-## 🌐 Deploy Ringan: Backend 24/7 + URL Publik (tanpa sudo/Docker)
+## 🌐 Deployment
 
-Agar backend **jalan terus** (auto-restart + tahan reboot) dan bisa diakses frontend/Vercel,
-gunakan `systemd --user` + `ngrok`. Tidak butuh Docker maupun akses admin.
+Backend dirancang berjalan sebagai layanan **auto-restart** di server on-premise, lalu
+diekspos ke frontend lewat reverse proxy / tunnel pilihanmu. Arahkan `NEXT_PUBLIC_API_URL`
+& `NEXT_PUBLIC_SOCKET_URL` pada frontend ke URL publik backend.
 
-### 1) Bangun & seed (sekali)
-```bash
-cd backend && npm install && npm run build
-backend/scripts/dev-services.sh up            # Postgres/Redis/MinIO (user-space)
-npx prisma migrate deploy                     # buat tabel
-npm run db:seed                               # buat super-admin (email/pass dari SEED_ADMIN_*)
-```
-> Password super-admin ditampilkan **sekali** saat seed — catat lalu ganti setelah login.
-
-### 2) Tiga unit `systemd --user` (di `~/.config/systemd/user/`)
-- **`axon-services.service`** — nyalakan Postgres/Redis/MinIO (bungkus `dev-services.sh up/down`).
-- **`axon-api.service`** — `node dist/main.js` (`Restart=always`, `WorkingDirectory=backend`, baca `backend/.env`).
-- **`axon-tunnel.service`** — `ngrok http --url=<domain-ngrok-anda> 4000`.
-
-```bash
-loginctl enable-linger "$USER"                 # tahan logout/reboot
-systemctl --user daemon-reload
-systemctl --user enable --now axon-services axon-api axon-tunnel
-```
-
-### 3) Kelola & pantau
-```bash
-systemctl --user status axon-api          # status
-systemctl --user restart axon-api         # restart
-journalctl --user -u axon-api -f          # log realtime
-```
-> Jika API `EADDRINUSE`/crash-loop: ada proses `node` lama pegang :4000 →
-> `ss -ltnp | grep :4000`, `kill <PID>`, lalu `systemctl --user restart axon-api`.
-
----
-
-## 🔗 Menghubungkan Frontend (Vercel) ke Backend
-
-1. Set env (di Vercel atau `apps/web/.env`) ke URL publik backend:
-   ```env
-   NEXT_PUBLIC_API_URL=https://<domain-ngrok>/api
-   NEXT_PUBLIC_SOCKET_URL=https://<domain-ngrok>
-   ```
-2. **WAJIB untuk ngrok:** frontend harus mengirim header `ngrok-skip-browser-warning: true`
-   pada **setiap** request ke API. Tanpa ini, ngrok free menampilkan halaman peringatan dan
-   request browser diblokir. Tambahkan di HTTP client (`apps/web/src/lib/api-client.ts`):
-   ```ts
-   headers: { 'ngrok-skip-browser-warning': 'true' /* , ...header lain */ }
-   ```
-
----
-
-## 🖼️ Serving Aset (gambar/video) di balik tunnel
-
-Hasil generate disimpan di MinIO (privat, hanya lokal). Agar tampil untuk user remote,
-backend menyediakan **proxy aset**: `GET /api/assets/*` men-stream objek lewat API (satu-satunya
-port yang di-tunnel), tanpa mengekspos MinIO. Aktifkan dengan set di `backend/.env`:
-```env
-ASSET_PUBLIC_BASE=https://<domain-ngrok>/api
-```
-`storage.getUrl()` otomatis mengembalikan `.../api/assets/<key>` (key ber-UUID, tak bisa
-ditebak). Kosongkan untuk memakai presigned URL lokal saat dev.
+Aset (gambar/video) disimpan privat di MinIO dan disajikan lewat **proxy aset** backend
+(`GET /api/assets/*`), sehingga MinIO tidak perlu diekspos langsung. Set `ASSET_PUBLIC_BASE`
+ke base URL publik `/api` bila backend berada di balik tunnel/proxy; kosongkan untuk memakai
+presigned URL lokal saat dev. Key aset ber-UUID (tak bisa ditebak).
 
 ---
 
 ## ⚠️ Catatan Penting
 
-- **ngrok free**: kuota ~1 GB/bulan + 1 sesi agent aktif. Untuk trafik gambar/video berat,
-  pertimbangkan upgrade atau domain + reverse proxy sendiri.
 - **`backend/.env` JANGAN di-commit** (berisi secret & URL) — sudah di `.gitignore`.
 - **Ganti** password super-admin & pastikan `JWT_ACCESS_SECRET`/`JWT_REFRESH_SECRET` acak kuat
   (mis. `openssl rand -hex 32`) sebelum dipakai serius.
 - **CORS**: `CORS_ORIGINS` kosong = izinkan semua origin (aman karena auth via JWT header,
-  bukan cookie); persempit ke domain Vercel bila perlu.
+  bukan cookie); persempit ke domain frontend bila perlu.
 
 ---
 
@@ -347,7 +292,7 @@ JWT_ACCESS_TTL=15m
 JWT_REFRESH_TTL=7d
 ```
 
-> ⚠️ **Jangan pernah commit file `.env`** ke repositori. Gunakan `.env.example` sebagai template.
+> ⚠️ **Jangan pernah commit file `.env`** ke repositori. Salin contoh di atas ke `backend/.env`.
 
 ---
 
@@ -416,9 +361,5 @@ Proyek ini dilisensikan di bawah **MIT License**. Lihat berkas `LICENSE` untuk d
 <div align="center">
 
 **AXON-RYZR** · Dibangun untuk berjalan optimal di server on-premise 🏫⚡
-
-## Contributors
-
-- Nur Adnan Yusri
 
 </div>

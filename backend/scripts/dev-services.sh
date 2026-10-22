@@ -42,8 +42,7 @@ detect_conda() {
   if command -v conda >/dev/null 2>&1; then command -v conda; return 0; fi
   local c
   for c in "$HOME/miniforge3/bin/conda" "$HOME/miniconda3/bin/conda" \
-           "$HOME/anaconda3/bin/conda" \
-           /home/muhammadrizalharis/DATA_ICAL/miniforge3/bin/conda; do
+           "$HOME/anaconda3/bin/conda"; do
     [[ -x "$c" ]] && { echo "$c"; return 0; }
   done
   return 1
