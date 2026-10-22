@@ -191,9 +191,9 @@ export function GenerationPanel() {
     generateAudio.isPending;
   const canSubmit = prompt.trim().length >= 3 && !pending;
 
-  // Wan 2.2 renders ~121 frames in ~3.5 minutes — give an honest estimate.
+  // LTX-2 renders ~73 frames in ~1 minute — give an honest estimate.
   const videoFrames = Math.max(5, Math.round(duration * fps));
-  const videoEta = Math.max(1, Math.round((videoFrames / 121) * 3.5));
+  const videoEta = Math.max(1, Math.round((videoFrames / 73) * 1.0));
 
   const submitImage = () => {
     if (!canSubmit) return;
@@ -492,7 +492,7 @@ export function GenerationPanel() {
               <input
                 type="number"
                 min={1}
-                max={15}
+                max={60}
                 value={duration}
                 onChange={(e) => setDuration(Number(e.target.value))}
                 className={numberCls}

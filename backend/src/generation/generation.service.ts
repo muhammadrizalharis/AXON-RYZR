@@ -85,7 +85,7 @@ export class GenerationService {
       );
     }
     const fps = dto.fps ?? 24;
-    const duration = dto.duration ?? 5;
+    const duration = dto.duration ?? 8;
 
     const { width, height } = resolveDimensions(
       dto.aspectRatio ?? AspectRatio.LANDSCAPE_16_9,

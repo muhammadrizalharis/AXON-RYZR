@@ -29,7 +29,7 @@ export const useDraftStore = create<DraftState>()((set) => ({
   aspectRatio: AspectRatio.LANDSCAPE_16_9,
   style: GenerationStyle.CINEMATIC,
   resolution: ImageResolution.FHD,
-  duration: 5,
+  duration: 8,
   fps: 24,
   setPrompt: (v) => set({ prompt: v }),
   setAspectRatio: (v) => set({ aspectRatio: v }),

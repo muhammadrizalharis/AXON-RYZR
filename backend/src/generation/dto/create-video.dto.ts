@@ -44,8 +44,8 @@ export class CreateVideoDto {
   @IsOptional()
   @IsNumber()
   @Min(1)
-  @Max(15)
-  duration?: number = 5; // seconds
+  @Max(60)
+  duration?: number = 8; // seconds
 
   @IsOptional()
   @IsInt()
