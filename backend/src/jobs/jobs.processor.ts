@@ -14,6 +14,7 @@ import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { buildTextToImageWorkflow } from '../comfyui/workflows/text-to-image.workflow';
 import { buildTextToVideoWorkflow } from '../comfyui/workflows/text-to-video.workflow';
 import { buildLtxVideoWorkflow } from '../comfyui/workflows/text-to-video-ltx.workflow';
+import { buildLtx25VideoWorkflow } from '../comfyui/workflows/text-to-video-ltx25.workflow';
 import { buildTextToAudioWorkflow } from '../comfyui/workflows/text-to-audio.workflow';
 import {
   GENERATION_QUEUE,
@@ -550,6 +551,23 @@ export class JobsProcessor extends WorkerHost {
         process.env.COMFYUI_VIDEO_ENGINE ??
         'ltx'
       ).toLowerCase();
+
+      // LTX-2.5 (newest, highest fidelity) — image-to-video only. Falls back to
+      // the LTX-2.3 path below when no start frame is available (text-to-video).
+      if (engine === 'ltx25' && startImageName) {
+        return buildLtx25VideoWorkflow({
+          prompt,
+          negativePrompt,
+          width: params.width,
+          height: params.height,
+          seed: params.seed,
+          frames,
+          fps,
+          startImageName,
+          samplerName: params.samplerName,
+        });
+      }
+
       if (engine !== 'wan') {
         const ltxSteps = Number(process.env.COMFYUI_LTX_STEPS) || 25;
         const ltxCfg = Number(process.env.COMFYUI_LTX_CFG) || 3;

@@ -116,6 +116,13 @@ services:
       COMFYUI_LTX_SAMPLER: ${COMFYUI_LTX_SAMPLER:-euler}
       COMFYUI_LTX_STEPS: ${COMFYUI_LTX_STEPS:-25}
       COMFYUI_LTX_CFG: ${COMFYUI_LTX_CFG:-3}
+      COMFYUI_LTX25_UNET: ${COMFYUI_LTX25_UNET:-ltx-2.5-22b-distilled-transformer-comfy-int8-convrot.safetensors}
+      COMFYUI_LTX25_VAE_VIDEO: ${COMFYUI_LTX25_VAE_VIDEO:-ltx-2.5-video-vae-bf16.safetensors}
+      COMFYUI_LTX25_VAE_AUDIO: ${COMFYUI_LTX25_VAE_AUDIO:-ltx-2.5-audio-vae-bf16.safetensors}
+      COMFYUI_LTX25_CLIP: ${COMFYUI_LTX25_CLIP:-gemma4-12b-with-proj-ltx-2.5-comfy-int8-convrot.safetensors}
+      COMFYUI_LTX25_UPSCALER: ${COMFYUI_LTX25_UPSCALER:-ltx-2.5-latent-spatial-upscaler-x2-bf16-1.0.safetensors}
+      COMFYUI_LTX25_SAMPLER: ${COMFYUI_LTX25_SAMPLER:-euler_ancestral}
+      COMFYUI_LTX25_IMAGE_STRENGTH: ${COMFYUI_LTX25_IMAGE_STRENGTH:-0.7}
       COMFYUI_AUDIO_ENABLED: ${COMFYUI_AUDIO_ENABLED:-false}
       COMFYUI_TIMEOUT_MS: ${COMFYUI_TIMEOUT_MS:-1800000}
       COMFYUI_FLUX_UNET: ${COMFYUI_FLUX_UNET:-flux2_dev_fp8mixed.safetensors}

@@ -117,7 +117,7 @@ export function GenerationPanel() {
   const [lyrics, setLyrics] = useState('');
   const [musicDuration, setMusicDuration] = useState(60);
   const [advanced, setAdvanced] = useState(false);
-  const [model, setModel] = useState<'aura' | 'genesis'>('aura');
+  const [model, setModel] = useState<'aura' | 'genesis' | 'ultra'>('aura');
   // Video: image-to-video source frame (base64 data URL) + music options.
   const [sourceImage, setSourceImage] = useState<string | null>(null);
   // Character reference photo (base64 data URL) — FLUX.2 identity lock.
@@ -234,7 +234,8 @@ export function GenerationPanel() {
       steps: videoSteps,
       sourceImage: sourceImage || undefined,
       characterImage: characterImage || undefined,
-      videoEngine: model === 'genesis' ? 'wan' : 'ltx',
+      videoEngine:
+        model === 'genesis' ? 'wan' : model === 'ultra' ? 'ltx25' : 'ltx',
       ...musicFields,
     });
   };
@@ -335,7 +336,7 @@ export function GenerationPanel() {
         <div className="w-60">
           <Select
             value={model}
-            onValueChange={(v) => setModel(v as 'aura' | 'genesis')}
+            onValueChange={(v) => setModel(v as 'aura' | 'genesis' | 'ultra')}
           >
             <SelectTrigger>
               <SelectValue />
@@ -343,6 +344,9 @@ export function GenerationPanel() {
             <SelectContent>
               <SelectItem value="aura">
                 Aura AI v4.0 — Sinematik (LTX-2)
+              </SelectItem>
+              <SelectItem value="ultra">
+                Aura AI v5.0 — Ultra Real (LTX-2.5)
               </SelectItem>
               <SelectItem value="genesis">
                 Genesis Motion — Cepat (Wan 2.2)

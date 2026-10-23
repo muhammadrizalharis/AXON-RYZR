@@ -70,8 +70,8 @@ export class CreateVideoDto {
   verifyText?: boolean;
 
   @IsOptional()
-  @IsIn(['ltx', 'wan'])
-  videoEngine?: 'ltx' | 'wan';
+  @IsIn(['ltx', 'wan', 'ltx25'])
+  videoEngine?: 'ltx' | 'wan' | 'ltx25';
 
   /** Base64 (data URL or raw) start frame to animate — image-to-video. */
   @IsOptional()

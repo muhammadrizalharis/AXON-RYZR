@@ -190,8 +190,8 @@ export interface CreateVideoPayload {
   fps?: number;
   steps?: number;
   seed?: number;
-  /** Diffusion engine: 'ltx' (LTX-2 22B, cinematic) or 'wan' (Wan 2.2 5B). */
-  videoEngine?: 'ltx' | 'wan';
+  /** Diffusion engine: 'ltx' (LTX-2.3 22B, cinematic), 'wan' (Wan 2.2 5B), or 'ltx25' (LTX-2.5 22B, newest, image-to-video). */
+  videoEngine?: 'ltx' | 'wan' | 'ltx25';
   /** Base64 (data URL or raw) start frame to animate — image-to-video. */
   sourceImage?: string;
   /**
