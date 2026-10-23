@@ -61,6 +61,15 @@ export class CreateImageDto {
   @IsBoolean()
   verifyText?: boolean;
 
+  /**
+   * Base64 (data URL or raw) character reference photo. When provided, FLUX.2
+   * keeps this person's identity (face/subject) while rendering the new prompt.
+   */
+  @IsOptional()
+  @IsString()
+  @MaxLength(15_000_000)
+  characterImage?: string;
+
   @IsOptional()
   @IsUUID()
   projectId?: string;

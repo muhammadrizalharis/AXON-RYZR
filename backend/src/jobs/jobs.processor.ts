@@ -153,7 +153,14 @@ export class JobsProcessor extends WorkerHost {
       this.textVerify.available;
 
     if (!verifyOn) {
-      const startImageName = await this.prepareStartImage(type, params);
+      const refs = await this.resolveReferenceImages(
+        jobId,
+        userId,
+        type,
+        renderPrompt,
+        negativePrompt,
+        params,
+      );
       return this.runRender(
         jobId,
         userId,
@@ -163,12 +170,22 @@ export class JobsProcessor extends WorkerHost {
           renderPrompt,
           negativePrompt,
           params,
-          startImageName,
+          refs.startImageName,
+          refs.referenceImageName,
         ),
       );
     }
 
-    const startImageName = await this.prepareStartImage(type, params);
+    const refs = await this.resolveReferenceImages(
+      jobId,
+      userId,
+      type,
+      renderPrompt,
+      negativePrompt,
+      params,
+    );
+    const startImageName = refs.startImageName;
+    const referenceImageName = refs.referenceImageName;
     const required = await this.textVerify.extractRequiredText(
       params.originalPrompt ?? '',
       renderPrompt,
@@ -192,6 +209,7 @@ export class JobsProcessor extends WorkerHost {
           negativePrompt,
           { ...params, seed },
           startImageName,
+          referenceImageName,
         ),
       );
 
@@ -299,6 +317,136 @@ export class JobsProcessor extends WorkerHost {
   }
 
   /**
+   * Resolves the two optional reference inputs for a render:
+   *  - startImageName: a literal start frame for VIDEO (LTX image-to-video).
+   *  - referenceImageName: a character identity reference for IMAGE (FLUX.2
+   *    ReferenceLatent).
+   *
+   * Precedence for VIDEO: an explicit uploaded start frame wins; otherwise a
+   * character photo is first turned into an identity-locked scene keyframe
+   * (FLUX.2) which then becomes the start frame to animate — "my character as
+   * an actor". Everything fails SOFT back to plain text-to-video/image.
+   */
+  private async resolveReferenceImages(
+    jobId: string,
+    userId: string,
+    type: JobType,
+    renderPrompt: string,
+    negativePrompt: string | undefined,
+    params: GenerationParams,
+  ): Promise<{ startImageName?: string; referenceImageName?: string }> {
+    if (type === JobType.IMAGE) {
+      if (!params.characterImageKey) return {};
+      const name = await this.uploadRefToComfy(
+        params.characterImageKey,
+        'character-ref.png',
+      );
+      if (name) {
+        this.logger.log(`Character lock: FLUX.2 reference image (${name})`);
+      }
+      return { referenceImageName: name };
+    }
+
+    if (type === JobType.VIDEO) {
+      // Explicit start frame to animate takes precedence over a character ref.
+      const startImageName = await this.prepareStartImage(type, params);
+      if (startImageName) return { startImageName };
+      if (params.characterImageKey) {
+        const keyframe = await this.prepareCharacterKeyframe(
+          jobId,
+          userId,
+          renderPrompt,
+          negativePrompt,
+          params,
+        );
+        return { startImageName: keyframe };
+      }
+    }
+
+    return {};
+  }
+
+  /** Uploads a stored image into ComfyUI's input folder. Fails SOFT. */
+  private async uploadRefToComfy(
+    storageKey: string,
+    fallbackName: string,
+  ): Promise<string | undefined> {
+    try {
+      const buffer = await this.storage.getObjectBuffer(storageKey);
+      const name = await this.comfyui.uploadImage(
+        buffer,
+        storageKey.split('/').pop() || fallbackName,
+      );
+      return name || undefined;
+    } catch (err) {
+      this.logger.warn(
+        `Character lock: failed to upload reference — ${
+          (err as Error).message
+        }`,
+      );
+      return undefined;
+    }
+  }
+
+  /**
+   * VIDEO character lock: renders a single FLUX.2 keyframe that places the
+   * user's character (identity preserved via ReferenceLatent) into the
+   * requested scene, then uploads that keyframe into ComfyUI so LTX-2 can
+   * animate it. Fails SOFT — on any problem returns undefined so the job falls
+   * back to plain text-to-video.
+   */
+  private async prepareCharacterKeyframe(
+    jobId: string,
+    userId: string,
+    renderPrompt: string,
+    negativePrompt: string | undefined,
+    params: GenerationParams,
+  ): Promise<string | undefined> {
+    const refName = await this.uploadRefToComfy(
+      params.characterImageKey as string,
+      'character-ref.png',
+    );
+    if (!refName) return undefined;
+    try {
+      this.logger.log(`Character lock: rendering FLUX.2 identity keyframe`);
+      const keyframeWorkflow = buildTextToImageWorkflow({
+        prompt: renderPrompt,
+        width: params.width,
+        height: params.height,
+        steps: 20,
+        seed: params.seed,
+        batchSize: 1,
+        referenceImageName: refName,
+      });
+      const outputs = await this.runRender(
+        jobId,
+        userId,
+        JobType.IMAGE,
+        keyframeWorkflow,
+      );
+      const image = outputs.find((o) => o.mimeType.startsWith('image/'));
+      if (!image) {
+        this.logger.warn('Character lock: keyframe produced no image — T2V');
+        return undefined;
+      }
+      const name = await this.comfyui.uploadImage(
+        image.buffer,
+        `character-keyframe-${params.seed}.png`,
+      );
+      if (!name) return undefined;
+      this.logger.log(`Character lock: animating identity keyframe (${name})`);
+      return name;
+    } catch (err) {
+      this.logger.warn(
+        `Character lock: keyframe failed — falling back to T2V: ${
+          (err as Error).message
+        }`,
+      );
+      return undefined;
+    }
+  }
+
+  /**
    * Attaches a music track to a rendered video (image-to-video or text-to-
    * video). Source is either an existing AUDIO job or a freshly generated
    * ACE-Step track. Fails SOFT — on any problem the silent video is kept.
@@ -388,6 +536,7 @@ export class JobsProcessor extends WorkerHost {
     negativePrompt: string | undefined,
     params: GenerationParams,
     startImageName?: string,
+    referenceImageName?: string,
   ): Record<string, unknown> {
     if (type === JobType.VIDEO) {
       const fps = params.fps ?? 24;
@@ -453,6 +602,7 @@ export class JobsProcessor extends WorkerHost {
       batchSize: params.batchSize,
       guidance: params.guidance,
       samplerName: params.samplerName,
+      referenceImageName,
     });
   }
 

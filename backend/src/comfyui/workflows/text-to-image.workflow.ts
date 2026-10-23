@@ -10,6 +10,11 @@
  * FLUX.2 dev is guidance-distilled: no negative prompt / CFG (guidance is baked
  * via FluxGuidance). Asset names are overridable via COMFYUI_FLUX_* env vars so
  * ops can point at whatever is actually installed on the GPU node.
+ *
+ * Optional character lock: when a reference image is supplied, it is VAE-encoded
+ * and fed through ReferenceLatent — FLUX.2's native in-context identity
+ * preservation — so the same person/subject appears in the new scene. This uses
+ * only installed models/nodes; it does not change any ComfyUI configuration.
  */
 
 const envStr = (key: string, fallback: string): string => {
@@ -41,6 +46,13 @@ export interface TextToImageWorkflowParams {
   lora?: string;
   loraStrength?: number;
   weightDtype?: string;
+  /**
+   * Optional character reference. When set, the named image (already present in
+   * ComfyUI's input folder) is VAE-encoded and fed through ReferenceLatent so
+   * FLUX.2 keeps that subject's identity while following the new prompt. This is
+   * FLUX.2's native in-context character consistency — no extra models/nodes.
+   */
+  referenceImageName?: string;
 }
 
 export function buildTextToImageWorkflow(
@@ -61,6 +73,7 @@ export function buildTextToImageWorkflow(
     lora = envStr('COMFYUI_FLUX_LORA', ''),
     loraStrength = envNum('COMFYUI_FLUX_LORA_STRENGTH', 1),
     weightDtype = envStr('COMFYUI_FLUX_WEIGHT_DTYPE', 'default'),
+    referenceImageName,
   } = params;
 
   const graph: Record<
@@ -126,6 +139,25 @@ export function buildTextToImageWorkflow(
       inputs: { images: ['decode', 0], filename_prefix: `AXON_${seed}` },
     },
   };
+
+  // Optional character reference (FLUX.2 native in-context identity lock):
+  // VAE-encode the reference image and wrap the positive conditioning with
+  // ReferenceLatent so the subject's identity is preserved in the new scene.
+  if (referenceImageName) {
+    graph.loadref = {
+      class_type: 'LoadImage',
+      inputs: { image: referenceImageName },
+    };
+    graph.encoderef = {
+      class_type: 'VAEEncode',
+      inputs: { pixels: ['loadref', 0], vae: ['vae', 0] },
+    };
+    graph.referencelatent = {
+      class_type: 'ReferenceLatent',
+      inputs: { conditioning: ['positive', 0], latent: ['encoderef', 0] },
+    };
+    graph.fluxguidance.inputs.conditioning = ['referencelatent', 0];
+  }
 
   // Optional acceleration LoRA (e.g. Flux.2 Turbo) applied to the model only.
   if (lora) {

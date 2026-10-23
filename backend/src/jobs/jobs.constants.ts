@@ -43,6 +43,8 @@ export interface GenerationParams {
   lyricsStrength?: number;
   // video: image-to-video source (MinIO key of the uploaded start frame)
   sourceImageKey?: string;
+  // image/video: character reference photo (MinIO key) — FLUX.2 identity lock
+  characterImageKey?: string;
   // video: optional music track muxed into the output
   music?: boolean;
   musicPrompt?: string;

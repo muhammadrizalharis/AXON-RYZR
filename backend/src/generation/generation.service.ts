@@ -66,6 +66,20 @@ export class GenerationService {
       verifyText: dto.verifyText,
     };
 
+    // Character reference: persist the face/subject photo so FLUX.2 can lock
+    // this person's identity while rendering the new prompt.
+    if (dto.characterImage) {
+      const decoded = this.decodeImage(dto.characterImage);
+      const uploaded = await this.storage.uploadBuffer(
+        userId,
+        decoded.buffer,
+        `character-ref.${decoded.ext}`,
+        decoded.mime,
+      );
+      params.characterImageKey = uploaded.storageKey;
+      await this.users.addStorageUsage(userId, uploaded.size);
+    }
+
     return this.createJob({
       userId,
       type: JobType.IMAGE,
@@ -119,6 +133,20 @@ export class GenerationService {
         decoded.mime,
       );
       params.sourceImageKey = uploaded.storageKey;
+      await this.users.addStorageUsage(userId, uploaded.size);
+    }
+
+    // Character reference: persist the face/subject photo so the keyframe
+    // render can lock this person's identity into the scene.
+    if (dto.characterImage) {
+      const decoded = this.decodeImage(dto.characterImage);
+      const uploaded = await this.storage.uploadBuffer(
+        userId,
+        decoded.buffer,
+        `character-ref.${decoded.ext}`,
+        decoded.mime,
+      );
+      params.characterImageKey = uploaded.storageKey;
       await this.users.addStorageUsage(userId, uploaded.size);
     }
 

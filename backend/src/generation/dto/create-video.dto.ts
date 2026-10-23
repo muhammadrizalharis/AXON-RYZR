@@ -74,6 +74,16 @@ export class CreateVideoDto {
   @MaxLength(15_000_000)
   sourceImage?: string;
 
+  /**
+   * Base64 (data URL or raw) character reference photo. When provided, a
+   * keyframe is first rendered with FLUX.2 preserving this person's identity in
+   * the requested scene, then animated into video — "my character as an actor".
+   */
+  @IsOptional()
+  @IsString()
+  @MaxLength(15_000_000)
+  characterImage?: string;
+
   /** Attach a music track to the output video. */
   @IsOptional()
   @IsBoolean()

@@ -120,6 +120,8 @@ export function GenerationPanel() {
   const [model, setModel] = useState<'aura' | 'genesis'>('aura');
   // Video: image-to-video source frame (base64 data URL) + music options.
   const [sourceImage, setSourceImage] = useState<string | null>(null);
+  // Character reference photo (base64 data URL) — FLUX.2 identity lock.
+  const [characterImage, setCharacterImage] = useState<string | null>(null);
   const [withMusic, setWithMusic] = useState(false);
   const [musicSource, setMusicSource] = useState<'auto' | 'existing'>('auto');
   const [videoMusicPrompt, setVideoMusicPrompt] = useState('');
@@ -205,6 +207,7 @@ export function GenerationPanel() {
       resolution,
       batchSize,
       steps: imageSteps,
+      characterImage: characterImage || undefined,
     });
   };
 
@@ -230,6 +233,7 @@ export function GenerationPanel() {
       fps,
       steps: videoSteps,
       sourceImage: sourceImage || undefined,
+      characterImage: characterImage || undefined,
       ...musicFields,
     });
   };
@@ -240,6 +244,15 @@ export function GenerationPanel() {
     if (file.size > 12 * 1024 * 1024) return;
     const reader = new FileReader();
     reader.onload = () => setSourceImage(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const onPickCharacterImage = (file: File | undefined) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) return;
+    if (file.size > 12 * 1024 * 1024) return;
+    const reader = new FileReader();
+    reader.onload = () => setCharacterImage(reader.result as string);
     reader.readAsDataURL(file);
   };
 
@@ -520,6 +533,45 @@ export function GenerationPanel() {
                 className={numberCls}
               />
             </div>
+          </div>
+
+          <div className="rounded-xl border border-accent/20 bg-accent/5 p-3">
+            <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest text-accent">
+              <ImageIcon className="h-3.5 w-3.5" /> Karakter: Kunci Wajah
+              (Image &amp; Video)
+            </p>
+            <label className={labelCls}>
+              Foto karakter (opsional — jaga wajah/karakter yang sama di scene
+              baru)
+            </label>
+            {characterImage ? (
+              <div className="flex items-center gap-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={characterImage}
+                  alt="character reference"
+                  className="h-16 w-16 rounded-lg border border-accent/30 object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => setCharacterImage(null)}
+                  className="flex items-center gap-1 rounded-lg border border-border/60 px-2 py-1 text-xs text-muted-foreground transition hover:text-foreground"
+                >
+                  <X className="h-3.5 w-3.5" /> Hapus
+                </button>
+              </div>
+            ) : (
+              <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-accent/30 bg-background/40 px-3 py-2 text-sm text-muted-foreground transition hover:border-accent/60 hover:text-foreground">
+                <Upload className="h-4 w-4" />
+                Pilih foto karakter (wajah Anda jadi aktor)
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => onPickCharacterImage(e.target.files?.[0])}
+                />
+              </label>
+            )}
           </div>
 
           <div className="rounded-xl border border-cyan/20 bg-cyan/5 p-3">

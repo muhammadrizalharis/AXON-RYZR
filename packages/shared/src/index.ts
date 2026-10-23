@@ -175,6 +175,8 @@ export interface CreateImagePayload {
   batchSize?: number;
   steps?: number;
   seed?: number;
+  /** Base64 (data URL or raw) character reference — FLUX.2 identity lock. */
+  characterImage?: string;
   projectId?: string;
 }
 
@@ -190,6 +192,12 @@ export interface CreateVideoPayload {
   seed?: number;
   /** Base64 (data URL or raw) start frame to animate — image-to-video. */
   sourceImage?: string;
+  /**
+   * Base64 (data URL or raw) character reference. A FLUX.2 keyframe preserving
+   * this person's identity is rendered for the scene, then animated — "my
+   * character as an actor".
+   */
+  characterImage?: string;
   /** Attach a music track to the output video. */
   music?: boolean;
   /** Style/genre brief for auto-generated music; defaults to the main prompt. */
