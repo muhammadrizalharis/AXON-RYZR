@@ -544,7 +544,12 @@ export class JobsProcessor extends WorkerHost {
         params.frames ?? Math.max(1, Math.round((params.duration ?? 5) * fps));
 
       // Engine select: LTX-2 22B (high quality, default) or Wan 2.2 5B.
-      const engine = (process.env.COMFYUI_VIDEO_ENGINE ?? 'ltx').toLowerCase();
+      // Per-job override (params.videoEngine) wins over the server default.
+      const engine = (
+        params.videoEngine ??
+        process.env.COMFYUI_VIDEO_ENGINE ??
+        'ltx'
+      ).toLowerCase();
       if (engine !== 'wan') {
         const ltxSteps = Number(process.env.COMFYUI_LTX_STEPS) || 25;
         const ltxCfg = Number(process.env.COMFYUI_LTX_CFG) || 3;

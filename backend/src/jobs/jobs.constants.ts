@@ -37,6 +37,8 @@ export interface GenerationParams {
   fps?: number;
   duration?: number;
   motionModule?: string;
+  // video: diffusion engine — 'ltx' (LTX-2 22B) or 'wan' (Wan 2.2 5B)
+  videoEngine?: 'ltx' | 'wan';
   // audio only
   seconds?: number;
   lyrics?: string;

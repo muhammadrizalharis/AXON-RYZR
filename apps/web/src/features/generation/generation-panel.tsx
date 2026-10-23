@@ -234,6 +234,7 @@ export function GenerationPanel() {
       steps: videoSteps,
       sourceImage: sourceImage || undefined,
       characterImage: characterImage || undefined,
+      videoEngine: model === 'genesis' ? 'wan' : 'ltx',
       ...musicFields,
     });
   };
@@ -331,7 +332,7 @@ export function GenerationPanel() {
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <div className="w-44">
+        <div className="w-60">
           <Select
             value={model}
             onValueChange={(v) => setModel(v as 'aura' | 'genesis')}
@@ -340,8 +341,12 @@ export function GenerationPanel() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="aura">Aura AI v4.0</SelectItem>
-              <SelectItem value="genesis">Genesis Motion</SelectItem>
+              <SelectItem value="aura">
+                Aura AI v4.0 — Sinematik (LTX-2)
+              </SelectItem>
+              <SelectItem value="genesis">
+                Genesis Motion — Cepat (Wan 2.2)
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>

@@ -2,6 +2,7 @@ import {
   IsEnum,
   IsInt,
   IsBoolean,
+  IsIn,
   IsNumber,
   IsOptional,
   IsString,
@@ -67,6 +68,10 @@ export class CreateVideoDto {
   @IsOptional()
   @IsBoolean()
   verifyText?: boolean;
+
+  @IsOptional()
+  @IsIn(['ltx', 'wan'])
+  videoEngine?: 'ltx' | 'wan';
 
   /** Base64 (data URL or raw) start frame to animate — image-to-video. */
   @IsOptional()

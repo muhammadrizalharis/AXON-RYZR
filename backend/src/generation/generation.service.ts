@@ -121,6 +121,10 @@ export class GenerationService {
       verifyText: dto.verifyText,
     };
 
+    if (dto.videoEngine) {
+      params.videoEngine = dto.videoEngine;
+    }
+
     let cost = this.quota.videoCreditCost;
 
     // Image-to-video: persist the uploaded start frame, reference it by key.
