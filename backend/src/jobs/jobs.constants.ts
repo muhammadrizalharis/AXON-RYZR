@@ -43,6 +43,11 @@ export interface GenerationParams {
   seconds?: number;
   lyrics?: string;
   lyricsStrength?: number;
+  // voice (text-to-speech) only — when set, the AUDIO job is synthesized via
+  // Edge-TTS instead of the ACE-Step music model.
+  ttsVoice?: string;
+  ttsRate?: number;
+  ttsPitch?: number;
   // video: image-to-video source (MinIO key of the uploaded start frame)
   sourceImageKey?: string;
   // image/video: character reference photo (MinIO key) — FLUX.2 identity lock

@@ -6,6 +6,7 @@ import type {
   CreateAudioPayload,
   CreateImagePayload,
   CreateVideoPayload,
+  CreateVoicePayload,
 } from '@axon-ryzr/shared';
 import { generationApi } from '@/lib/api/generation';
 import { getApiErrorMessage } from '@/lib/api-client';
@@ -49,6 +50,21 @@ export function useGenerateAudio() {
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
       queryClient.invalidateQueries({ queryKey: ['me'] });
       toast.success('Music generation queued');
+    },
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, 'Failed to queue generation')),
+  });
+}
+
+export function useGenerateVoice() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: CreateVoicePayload) =>
+      generationApi.createVoice(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      queryClient.invalidateQueries({ queryKey: ['me'] });
+      toast.success('Voice generation queued');
     },
     onError: (err) =>
       toast.error(getApiErrorMessage(err, 'Failed to queue generation')),

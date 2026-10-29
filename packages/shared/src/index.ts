@@ -224,6 +224,50 @@ export interface CreateAudioPayload {
   projectId?: string;
 }
 
+// ── Voice (text-to-speech) ──
+
+export interface VoiceOption {
+  /** Edge-TTS short name, e.g. "id-ID-ArdiNeural". */
+  id: string;
+  /** Human-friendly label shown in the UI. */
+  label: string;
+  gender: 'male' | 'female';
+  /** Language group for grouping/labelling. */
+  lang: string;
+}
+
+/**
+ * Curated set of neural voices offered in the Creation Hub. Multilingual
+ * voices speak Indonesian naturally too. Keep this list in sync with the
+ * backend validator (it is the single source of truth for both sides).
+ */
+export const VOICE_OPTIONS: VoiceOption[] = [
+  { id: 'id-ID-ArdiNeural', label: 'Ardi — Pria (Indonesia)', gender: 'male', lang: 'Indonesia' },
+  { id: 'id-ID-GadisNeural', label: 'Gadis — Wanita (Indonesia)', gender: 'female', lang: 'Indonesia' },
+  { id: 'en-US-AndrewMultilingualNeural', label: 'Andrew — Pria (Multibahasa)', gender: 'male', lang: 'Multibahasa' },
+  { id: 'en-US-AvaMultilingualNeural', label: 'Ava — Wanita (Multibahasa)', gender: 'female', lang: 'Multibahasa' },
+  { id: 'en-US-GuyNeural', label: 'Guy — Pria (English)', gender: 'male', lang: 'English' },
+  { id: 'en-US-JennyNeural', label: 'Jenny — Wanita (English)', gender: 'female', lang: 'English' },
+  { id: 'en-GB-RyanNeural', label: 'Ryan — Pria (British)', gender: 'male', lang: 'English (UK)' },
+  { id: 'ja-JP-NanamiNeural', label: 'Nanami — Wanita (Jepang)', gender: 'female', lang: 'Jepang' },
+];
+
+export const VOICE_IDS: string[] = VOICE_OPTIONS.map((v) => v.id);
+
+export const DEFAULT_VOICE_ID = 'id-ID-ArdiNeural';
+
+export interface CreateVoicePayload {
+  /** The text to narrate. */
+  text: string;
+  /** Edge-TTS voice id; must be one of VOICE_IDS. */
+  voice?: string;
+  /** Speaking rate multiplier (0.5 = slower, 1.5 = faster). Default 1. */
+  rate?: number;
+  /** Pitch shift in Hz (-50..50). Default 0. */
+  pitch?: number;
+  projectId?: string;
+}
+
 // ── Realtime events ──
 
 export interface JobEventPayload {

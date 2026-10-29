@@ -5,6 +5,7 @@ import { GenerationService } from './generation.service';
 import { CreateImageDto } from './dto/create-image.dto';
 import { CreateVideoDto } from './dto/create-video.dto';
 import { CreateAudioDto } from './dto/create-audio.dto';
+import { CreateVoiceDto } from './dto/create-voice.dto';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 
 @ApiTags('generation')
@@ -29,6 +30,12 @@ export class GenerationController {
   @Post('audio')
   createAudio(@CurrentUser('id') userId: string, @Body() dto: CreateAudioDto) {
     return this.generationService.createAudioJob(userId, dto);
+  }
+
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  @Post('voice')
+  createVoice(@CurrentUser('id') userId: string, @Body() dto: CreateVoiceDto) {
+    return this.generationService.createVoiceJob(userId, dto);
   }
 
   @Throttle({ default: { limit: 20, ttl: 60_000 } })

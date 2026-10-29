@@ -2,6 +2,7 @@ import type {
   CreateAudioPayload,
   CreateImagePayload,
   CreateVideoPayload,
+  CreateVoicePayload,
   Job,
 } from '@axon-ryzr/shared';
 import { apiClient } from '../api-client';
@@ -15,6 +16,9 @@ export const generationApi = {
 
   createAudio: (payload: CreateAudioPayload) =>
     apiClient.post<Job>('/generation/audio', payload).then((r) => r.data),
+
+  createVoice: (payload: CreateVoicePayload) =>
+    apiClient.post<Job>('/generation/voice', payload).then((r) => r.data),
 
   retry: (jobId: string) =>
     apiClient.post<Job>(`/generation/retry/${jobId}`).then((r) => r.data),

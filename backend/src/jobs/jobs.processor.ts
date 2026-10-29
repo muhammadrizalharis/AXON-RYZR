@@ -24,6 +24,7 @@ import {
 import { PromptIntelligenceService } from '../prompt-intelligence/prompt-intelligence.service';
 import { TextVerificationService } from '../text-verification/text-verification.service';
 import { MediaService } from '../media/media.service';
+import { TtsService } from '../media/tts.service';
 
 @Processor(GENERATION_QUEUE, {
   concurrency: Number(process.env.JOB_CONCURRENCY) || 2,
@@ -40,6 +41,7 @@ export class JobsProcessor extends WorkerHost {
     private readonly promptIntel: PromptIntelligenceService,
     private readonly textVerify: TextVerificationService,
     private readonly media: MediaService,
+    private readonly tts: TtsService,
   ) {
     super();
   }
@@ -54,6 +56,32 @@ export class JobsProcessor extends WorkerHost {
       const started = await this.markRendering(jobId, userId, type);
       if (!started) {
         this.logger.log(`Job ${jobId} was cancelled before rendering started`);
+        return;
+      }
+
+      // Voice (text-to-speech) jobs bypass ComfyUI entirely — synthesize the
+      // narration here, persist it as an AUDIO asset, and finish.
+      if (type === JobType.AUDIO && params.ttsVoice) {
+        const voiceOutputs = await this.renderVoice(
+          jobId,
+          userId,
+          prompt,
+          params,
+        );
+        if (await this.isCancelled(jobId)) {
+          this.logger.log(`Job ${jobId} cancelled — discarding voice output`);
+          return;
+        }
+        const voiceAssets = await this.persistOutputs(
+          userId,
+          jobId,
+          type,
+          voiceOutputs,
+        );
+        await this.markCompleted(jobId, userId, type, voiceAssets);
+        this.logger.log(
+          `Job ${jobId} (voice) completed with ${voiceAssets.length} asset(s)`,
+        );
         return;
       }
 
@@ -265,6 +293,36 @@ export class JobsProcessor extends WorkerHost {
         });
       },
     );
+  }
+
+  /**
+   * Synthesizes a narration track via Edge-TTS (no GPU/ComfyUI). Returns a
+   * single MP3 output shaped like a ComfyUI output so it flows through the
+   * normal persist pipeline.
+   */
+  private async renderVoice(
+    jobId: string,
+    userId: string,
+    text: string,
+    params: GenerationParams,
+  ): Promise<ComfyOutputFile[]> {
+    await this.updateProgress(jobId, userId, JobType.AUDIO, 20);
+    const result = await this.tts.synthesize(text, {
+      voice: params.ttsVoice,
+      rate: params.ttsRate,
+      pitch: params.ttsPitch,
+      prefix: `AXON_VOICE_${params.seed}`,
+    });
+    await this.updateProgress(jobId, userId, JobType.AUDIO, 90);
+    return [
+      {
+        filename: result.filename,
+        subfolder: '',
+        type: 'output',
+        buffer: result.buffer,
+        mimeType: result.mimeType,
+      },
+    ];
   }
 
   /** Picks the buffer to OCR: the image itself, or a frame extracted from video. */

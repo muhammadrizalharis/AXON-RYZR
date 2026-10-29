@@ -6,6 +6,7 @@ import {
   Image as ImageIcon,
   Film,
   Music,
+  Mic2,
   SlidersHorizontal,
   Sparkles,
   Dices,
@@ -19,6 +20,8 @@ import {
   GenerationStyle,
   ImageResolution,
   AssetType,
+  VOICE_OPTIONS,
+  DEFAULT_VOICE_ID,
 } from '@axon-ryzr/shared';
 import {
   Select,
@@ -31,6 +34,7 @@ import {
   useGenerateAudio,
   useGenerateImage,
   useGenerateVideo,
+  useGenerateVoice,
 } from '@/features/generation/use-generate';
 import { useGallery } from '@/features/gallery/use-gallery';
 import { useDraftStore } from '@/store/draft-store';
@@ -116,6 +120,9 @@ export function GenerationPanel() {
   const [videoSteps, setVideoSteps] = useState(25);
   const [lyrics, setLyrics] = useState('');
   const [musicDuration, setMusicDuration] = useState(60);
+  // Voice (text-to-speech) options.
+  const [voiceId, setVoiceId] = useState<string>(DEFAULT_VOICE_ID);
+  const [voiceRate, setVoiceRate] = useState(1);
   const [advanced, setAdvanced] = useState(false);
   const [model, setModel] = useState<'aura' | 'genesis' | 'ultra'>('aura');
   // Video: image-to-video source frame (base64 data URL) + music options.
@@ -187,10 +194,12 @@ export function GenerationPanel() {
   const generateImage = useGenerateImage();
   const generateVideo = useGenerateVideo();
   const generateAudio = useGenerateAudio();
+  const generateVoice = useGenerateVoice();
   const pending =
     generateImage.isPending ||
     generateVideo.isPending ||
-    generateAudio.isPending;
+    generateAudio.isPending ||
+    generateVoice.isPending;
   const canSubmit = prompt.trim().length >= 3 && !pending;
 
   // LTX-2 renders ~73 frames in ~1 minute — give an honest estimate.
@@ -264,6 +273,15 @@ export function GenerationPanel() {
       prompt,
       lyrics: lyrics.trim() || undefined,
       duration: musicDuration,
+    });
+  };
+
+  const submitVoice = () => {
+    if (!prompt.trim() || pending) return;
+    generateVoice.mutate({
+      text: prompt,
+      voice: voiceId,
+      rate: voiceRate,
     });
   };
 
@@ -413,6 +431,20 @@ export function GenerationPanel() {
               <Music className="h-4 w-4" />
             )}
             Generate Music
+          </button>
+          <button
+            type="button"
+            onClick={submitVoice}
+            disabled={!prompt.trim() || pending}
+            title="Ubah teks di kotak prompt menjadi suara (text-to-speech). Pilih suara di Voice Options (Advanced Settings)."
+            className="shimmer flex items-center gap-2 rounded-xl bg-gradient-to-r from-pink-500 to-accent px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-pink-500/20 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {generateVoice.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Mic2 className="h-4 w-4" />
+            )}
+            Generate Voice
           </button>
         </div>
       </div>
@@ -735,6 +767,46 @@ export function GenerationPanel() {
                   value={musicDuration}
                   onChange={(e) => setMusicDuration(Number(e.target.value))}
                   className={numberCls}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-pink-500/20 bg-pink-500/5 p-3">
+            <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest text-pink-400">
+              <Mic2 className="h-3.5 w-3.5" /> Voice Options (Text-to-Speech)
+            </p>
+            <p className="mb-3 text-[11px] leading-relaxed text-muted-foreground">
+              Tulis naskah di kotak prompt di atas, pilih suara, lalu tekan{' '}
+              <span className="font-semibold text-pink-400">Generate Voice</span>.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-[1fr_200px]">
+              <div>
+                <label className={labelCls}>Pilih suara</label>
+                <select
+                  value={voiceId}
+                  onChange={(e) => setVoiceId(e.target.value)}
+                  className={numberCls}
+                >
+                  {VOICE_OPTIONS.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className={labelCls}>
+                  Kecepatan bicara ({voiceRate.toFixed(2)}×)
+                </label>
+                <input
+                  type="range"
+                  min={0.5}
+                  max={1.5}
+                  step={0.05}
+                  value={voiceRate}
+                  onChange={(e) => setVoiceRate(Number(e.target.value))}
+                  className="mt-2 w-full accent-pink-500"
                 />
               </div>
             </div>

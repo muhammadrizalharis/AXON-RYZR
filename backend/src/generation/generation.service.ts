@@ -17,6 +17,8 @@ import { serializeBigInt } from '../common/utils/serialize';
 import { CreateImageDto } from './dto/create-image.dto';
 import { CreateVideoDto } from './dto/create-video.dto';
 import { CreateAudioDto } from './dto/create-audio.dto';
+import { CreateVoiceDto } from './dto/create-voice.dto';
+import { DEFAULT_VOICE_ID } from './voice.presets';
 import {
   applyStyle,
   AspectRatio,
@@ -213,6 +215,36 @@ export class GenerationService {
   }
 
   /**
+   * Text-to-speech: narrates `text` with a chosen neural voice (Edge-TTS).
+   * Unlike music, this does NOT require ComfyUI/ACE-Step — synthesis runs in
+   * the worker — so it is available even when `audioEnabled` is false. The
+   * result is stored as a normal AUDIO asset.
+   */
+  async createVoiceJob(userId: string, dto: CreateVoiceDto) {
+    const cost = this.quota.audioCreditCost;
+
+    const params: GenerationParams = {
+      width: 0,
+      height: 0,
+      steps: 0,
+      cfg: 0,
+      seed: this.randomSeed(),
+      ttsVoice: dto.voice ?? DEFAULT_VOICE_ID,
+      ttsRate: dto.rate,
+      ttsPitch: dto.pitch,
+    };
+
+    return this.createJob({
+      userId,
+      type: JobType.AUDIO,
+      prompt: dto.text,
+      params,
+      cost,
+      projectId: dto.projectId,
+    });
+  }
+
+  /**
    * Re-queues a FAILED/CANCELLED job with its original parameters and a fresh
    * seed. Credits are debited again (the original failure was refunded).
    */
@@ -231,14 +263,16 @@ export class GenerationService {
         'Text-to-video belum tersedia — job video tidak dapat diulang.',
       );
     }
-    if (job.type === JobType.AUDIO && !this.audioEnabled) {
+    const retryParams = job.params as unknown as GenerationParams;
+    const isVoiceJob = Boolean(retryParams?.ttsVoice);
+    if (job.type === JobType.AUDIO && !isVoiceJob && !this.audioEnabled) {
       throw new NotImplementedException(
         'Text-to-music belum tersedia — job audio tidak dapat diulang.',
       );
     }
 
     const params = {
-      ...(job.params as unknown as GenerationParams),
+      ...retryParams,
       seed: this.randomSeed(), // fresh seed so transient artifacts differ
     };
 
