@@ -506,9 +506,10 @@ export class JobsProcessor extends WorkerHost {
   }
 
   /**
-   * Attaches a music track to a rendered video (image-to-video or text-to-
-   * video). Source is either an existing AUDIO job or a freshly generated
-   * ACE-Step track. Fails SOFT — on any problem the silent video is kept.
+   * Attaches an audio track to a rendered video (image-to-video or text-to-
+   * video). Source precedence: voice narration (Edge-TTS) > existing AUDIO job
+   * > freshly generated ACE-Step music. Fails SOFT — on any problem the silent
+   * video is kept.
    */
   private async applyMusicIfRequested(
     jobId: string,
@@ -517,7 +518,9 @@ export class JobsProcessor extends WorkerHost {
     outputs: ComfyOutputFile[],
   ): Promise<ComfyOutputFile[]> {
     if (type !== JobType.VIDEO) return outputs;
-    if (!params.music && !params.musicAudioJobId) return outputs;
+    if (!params.music && !params.musicAudioJobId && !params.voiceText) {
+      return outputs;
+    }
 
     const video = outputs.find((o) => o.mimeType.startsWith('video/'));
     if (!video) return outputs;
@@ -537,13 +540,15 @@ export class JobsProcessor extends WorkerHost {
         return outputs;
       }
 
-      this.logger.log(`Job ${jobId}: music track attached to video`);
+      this.logger.log(
+        `Job ${jobId}: ${params.voiceText ? 'voice narration' : 'music track'} attached to video`,
+      );
       return outputs.map((o) =>
         o === video ? { ...video, buffer: muxed } : o,
       );
     } catch (err) {
       this.logger.warn(
-        `Job ${jobId}: music attach failed — keeping silent video: ${
+        `Job ${jobId}: audio attach failed — keeping silent video: ${
           (err as Error).message
         }`,
       );
@@ -551,11 +556,23 @@ export class JobsProcessor extends WorkerHost {
     }
   }
 
-  /** Returns the audio buffer to mux: existing job's track, or auto-generated. */
+  /**
+   * Returns the audio buffer to mux. Precedence: voice narration (Edge-TTS) >
+   * existing AUDIO job's track > auto-generated ACE-Step music.
+   */
   private async resolveMusicTrack(
     jobId: string,
     params: GenerationParams,
   ): Promise<{ buffer: Buffer; filename: string } | null> {
+    if (params.voiceText) {
+      const result = await this.tts.synthesize(params.voiceText, {
+        voice: params.voiceVoice,
+        rate: params.voiceRate,
+        prefix: `AXON_NARRATION_${params.seed}`,
+      });
+      return { buffer: result.buffer, filename: result.filename };
+    }
+
     if (params.musicAudioJobId) {
       const asset = await this.prisma.asset.findFirst({
         where: { jobId: params.musicAudioJobId, type: AssetType.AUDIO },

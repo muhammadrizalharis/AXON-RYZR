@@ -57,6 +57,11 @@ export interface GenerationParams {
   musicPrompt?: string;
   musicSeconds?: number;
   musicAudioJobId?: string;
+  // video: optional voice narration (Edge-TTS) muxed into the output. Takes
+  // precedence over music as the attached audio track.
+  voiceText?: string;
+  voiceVoice?: string;
+  voiceRate?: number;
   // presentation metadata
   aspectRatio?: string;
   style?: string;

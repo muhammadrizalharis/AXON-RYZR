@@ -173,6 +173,15 @@ export class GenerationService {
       cost += this.quota.audioCreditCost;
     }
 
+    // Voice narration: synthesized via Edge-TTS and muxed in (no GPU needed).
+    // Takes precedence over music as the attached audio track.
+    if (dto.voiceNarration?.trim()) {
+      params.voiceText = dto.voiceNarration.trim();
+      params.voiceVoice = dto.voiceId ?? DEFAULT_VOICE_ID;
+      params.voiceRate = dto.voiceRate;
+      cost += this.quota.audioCreditCost;
+    }
+
     return this.createJob({
       userId,
       type: JobType.VIDEO,

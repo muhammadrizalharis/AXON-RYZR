@@ -134,6 +134,11 @@ export function GenerationPanel() {
   const [videoMusicPrompt, setVideoMusicPrompt] = useState('');
   const [videoMusicDuration, setVideoMusicDuration] = useState(10);
   const [audioJobId, setAudioJobId] = useState('');
+  // Video: direct voice-over narration (Edge-TTS) muxed into the video.
+  const [withVoiceOver, setWithVoiceOver] = useState(false);
+  const [videoVoiceText, setVideoVoiceText] = useState('');
+  const [videoVoiceId, setVideoVoiceId] = useState<string>(DEFAULT_VOICE_ID);
+  const [videoVoiceRate, setVideoVoiceRate] = useState(1);
   const audioAssets = useGallery({ type: AssetType.AUDIO, take: 50 });
   const [listening, setListening] = useState(false);
   const [voiceSupported, setVoiceSupported] = useState(false);
@@ -232,6 +237,14 @@ export function GenerationPanel() {
               musicDuration: videoMusicDuration,
             }
           : {};
+    const voiceFields =
+      withVoiceOver && videoVoiceText.trim()
+        ? {
+            voiceNarration: videoVoiceText.trim(),
+            voiceId: videoVoiceId,
+            voiceRate: videoVoiceRate,
+          }
+        : {};
     generateVideo.mutate({
       prompt,
       negativePrompt: negativePrompt || undefined,
@@ -246,6 +259,7 @@ export function GenerationPanel() {
       videoEngine:
         model === 'genesis' ? 'wan' : model === 'ultra' ? 'ltx25' : 'ltx',
       ...musicFields,
+      ...voiceFields,
     });
   };
 
@@ -738,6 +752,68 @@ export function GenerationPanel() {
                     </select>
                   </div>
                 )}
+              </div>
+            )}
+
+            <label className="mt-3 flex items-center gap-2 text-sm text-foreground">
+              <input
+                type="checkbox"
+                checked={withVoiceOver}
+                onChange={(e) => setWithVoiceOver(e.target.checked)}
+                className="h-4 w-4 accent-pink-500"
+              />
+              <Mic2 className="h-3.5 w-3.5 text-pink-400" />
+              Tambahkan narasi voice ke video
+            </label>
+
+            {withVoiceOver && (
+              <div className="mt-2 space-y-3 rounded-lg border border-pink-500/20 bg-pink-500/5 p-3">
+                <p className="text-[11px] leading-relaxed text-muted-foreground">
+                  Narasi diucapkan (text-to-speech) langsung ditempel ke video.
+                  Samakan durasi video dengan panjang narasi agar tidak
+                  terpotong.
+                </p>
+                <div>
+                  <label className={labelCls}>Naskah narasi</label>
+                  <textarea
+                    value={videoVoiceText}
+                    onChange={(e) => setVideoVoiceText(e.target.value)}
+                    placeholder="mis. Selamat datang di BOC AJA POS, solusi kasir untuk usaha Anda…"
+                    className="min-h-[72px] w-full resize-none rounded-lg border border-border/60 bg-background/50 p-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/50 focus:border-pink-500/60"
+                  />
+                </div>
+                <div className="grid gap-3 sm:grid-cols-[1fr_200px]">
+                  <div>
+                    <label className={labelCls}>Pilih suara</label>
+                    <select
+                      value={videoVoiceId}
+                      onChange={(e) => setVideoVoiceId(e.target.value)}
+                      className={numberCls}
+                    >
+                      {VOICE_OPTIONS.map((v) => (
+                        <option key={v.id} value={v.id}>
+                          {v.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelCls}>
+                      Kecepatan ({videoVoiceRate.toFixed(2)}×)
+                    </label>
+                    <input
+                      type="range"
+                      min={0.5}
+                      max={1.5}
+                      step={0.05}
+                      value={videoVoiceRate}
+                      onChange={(e) =>
+                        setVideoVoiceRate(Number(e.target.value))
+                      }
+                      className="mt-2 w-full accent-pink-500"
+                    />
+                  </div>
+                </div>
               </div>
             )}
           </div>

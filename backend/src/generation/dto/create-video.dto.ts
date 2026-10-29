@@ -18,6 +18,7 @@ import {
   ImageResolution,
   MAX_PROMPT_LENGTH,
 } from '../generation.presets';
+import { VOICE_IDS } from '../voice.presets';
 
 export class CreateVideoDto {
   @IsString()
@@ -111,6 +112,28 @@ export class CreateVideoDto {
   @IsOptional()
   @IsUUID()
   audioJobId?: string;
+
+  /**
+   * Voice narration text (Edge-TTS). When provided, the spoken narration is
+   * muxed into the video as its audio track (takes precedence over music).
+   */
+  @IsOptional()
+  @IsString()
+  @MaxLength(5000)
+  voiceNarration?: string;
+
+  /** Neural voice id for the narration; must be one of the offered voices. */
+  @IsOptional()
+  @IsString()
+  @IsIn(VOICE_IDS)
+  voiceId?: string;
+
+  /** Narration speaking rate multiplier: 0.5 (slower) … 1.5 (faster). */
+  @IsOptional()
+  @IsNumber()
+  @Min(0.5)
+  @Max(1.5)
+  voiceRate?: number;
 
   @IsOptional()
   @IsUUID()

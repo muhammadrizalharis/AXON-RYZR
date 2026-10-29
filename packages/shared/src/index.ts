@@ -208,6 +208,15 @@ export interface CreateVideoPayload {
   musicDuration?: number;
   /** Use an existing AUDIO job's track instead of generating new music. */
   audioJobId?: string;
+  /**
+   * Voice narration text (Edge-TTS) to speak over the video. When set, it is
+   * muxed in as the audio track (takes precedence over music).
+   */
+  voiceNarration?: string;
+  /** Neural voice id for the narration (one of VOICE_IDS). */
+  voiceId?: string;
+  /** Narration speaking rate multiplier (0.5 … 1.5). */
+  voiceRate?: number;
   projectId?: string;
 }
 
