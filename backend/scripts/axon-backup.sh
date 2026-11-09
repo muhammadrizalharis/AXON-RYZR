@@ -25,7 +25,7 @@ OUT="$HOME/axon-backups"
 REPO="$HOME/DATA_ICAL/AXON-RYZR"
 ENVFILE="$REPO/.env"            # root .env stack Docker (POSTGRES_*, MINIO_*)
 PASSFILE="$BASE/backup.pass"
-PGDUMP="$BASE/conda-env/bin/pg_dump"
+PGDUMP="$(command -v pg_dump || echo "$BASE/conda-env/bin/pg_dump")"
 MC="$BASE/bin/mc"
 PGHOST=127.0.0.1; PGPORT=55432          # Postgres Docker dipetakan ke loopback
 MINIO_ENDPOINT="http://127.0.0.1:9200"  # MinIO Docker (loopback)
