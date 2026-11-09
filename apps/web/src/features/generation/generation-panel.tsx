@@ -14,6 +14,7 @@ import {
   MicOff,
   Upload,
   X,
+  ScanText,
 } from 'lucide-react';
 import {
   AspectRatio,
@@ -129,6 +130,7 @@ export function GenerationPanel() {
   const [sourceImage, setSourceImage] = useState<string | null>(null);
   // Character reference photo (base64 data URL) — FLUX.2 identity lock.
   const [characterImage, setCharacterImage] = useState<string | null>(null);
+  const [verifyText, setVerifyText] = useState(false);
   const [withMusic, setWithMusic] = useState(false);
   const [musicSource, setMusicSource] = useState<'auto' | 'existing'>('auto');
   const [videoMusicPrompt, setVideoMusicPrompt] = useState('');
@@ -221,6 +223,7 @@ export function GenerationPanel() {
       resolution,
       batchSize,
       steps: imageSteps,
+      verifyText: verifyText || undefined,
       characterImage: characterImage || undefined,
     });
   };
@@ -254,6 +257,7 @@ export function GenerationPanel() {
       duration,
       fps,
       steps: videoSteps,
+      verifyText: verifyText || undefined,
       sourceImage: sourceImage || undefined,
       characterImage: characterImage || undefined,
       videoEngine:
@@ -588,6 +592,28 @@ export function GenerationPanel() {
                 className={numberCls}
               />
             </div>
+          </div>
+
+          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3">
+            <label className="flex items-start gap-2 text-sm text-foreground">
+              <input
+                type="checkbox"
+                checked={verifyText}
+                onChange={(e) => setVerifyText(e.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-emerald-500"
+              />
+              <span>
+                <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest text-emerald-500">
+                  <ScanText className="h-3.5 w-3.5" /> Akurasi Teks (verifikasi
+                  OCR)
+                </span>
+                <span className="mt-1 block text-xs text-muted-foreground">
+                  Periksa teks pada hasil dengan OCR lalu render ulang koreksi
+                  bila ada typo. Memperlambat generate — aktifkan hanya saat
+                  prompt memuat teks/tulisan penting.
+                </span>
+              </span>
+            </label>
           </div>
 
           <div className="rounded-xl border border-accent/20 bg-accent/5 p-3">

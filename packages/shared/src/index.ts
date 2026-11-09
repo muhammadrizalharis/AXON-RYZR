@@ -175,6 +175,8 @@ export interface CreateImagePayload {
   batchSize?: number;
   steps?: number;
   seed?: number;
+  /** Verify rendered text with OCR and re-render corrections (opt-in, slow). */
+  verifyText?: boolean;
   /** Base64 (data URL or raw) character reference — FLUX.2 identity lock. */
   characterImage?: string;
   projectId?: string;
@@ -190,6 +192,8 @@ export interface CreateVideoPayload {
   fps?: number;
   steps?: number;
   seed?: number;
+  /** Verify rendered text with OCR and re-render corrections (opt-in, slow). */
+  verifyText?: boolean;
   /** Diffusion engine: 'ltx' (LTX-2.3 22B, cinematic), 'wan' (Wan 2.2 5B), or 'ltx25' (LTX-2.5 22B, newest, image-to-video). */
   videoEngine?: 'ltx' | 'wan' | 'ltx25';
   /** Base64 (data URL or raw) start frame to animate — image-to-video. */
