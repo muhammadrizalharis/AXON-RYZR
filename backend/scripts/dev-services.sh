@@ -30,9 +30,24 @@ REDIS_PORT="${AXON_REDIS_PORT:-56379}"
 MINIO_PORT="${AXON_MINIO_PORT:-59000}"
 MINIO_CONSOLE_PORT="${AXON_MINIO_CONSOLE_PORT:-59001}"
 
-# Kredensial dev (lokal saja, JANGAN dipakai produksi).
-PG_USER="axon"; PG_PW="axon_dev_pw"; PG_DB="axon_db"
-MINIO_USER="axon-minio"; MINIO_PW="axon-minio-dev"; MINIO_BUCKET="axon-assets"
+# Kredensial dev: di-generate acak sekali, disimpan di luar repo (chmod 600).
+PG_USER="axon"; PG_DB="axon_db"
+MINIO_USER="axon-minio"; MINIO_BUCKET="axon-assets"
+CREDS_FILE="$BASE/dev-creds.env"
+if [[ ! -f "$CREDS_FILE" ]]; then
+  mkdir -p "$BASE"
+  (
+    umask 077
+    {
+      echo "PG_PW=$(openssl rand -hex 16)"
+      echo "MINIO_PW=$(openssl rand -hex 16)"
+      echo "JWT_ACCESS_DEV=$(openssl rand -hex 32)"
+      echo "JWT_REFRESH_DEV=$(openssl rand -hex 32)"
+    } > "$CREDS_FILE"
+  )
+fi
+# shellcheck disable=SC1090
+source "$CREDS_FILE"
 
 log() { printf '\033[36m[axon-dev]\033[0m %s\n' "$*"; }
 err() { printf '\033[31m[axon-dev] ERROR:\033[0m %s\n' "$*" >&2; }
@@ -146,8 +161,8 @@ MINIO_SECRET_KEY=$MINIO_PW
 MINIO_BUCKET=$MINIO_BUCKET
 MINIO_PUBLIC_URL=
 COMFYUI_BASE_URL=http://127.0.0.1:8188
-JWT_ACCESS_SECRET=dev-access-secret-change-me-0001
-JWT_REFRESH_SECRET=dev-refresh-secret-change-me-0002
+JWT_ACCESS_SECRET=$JWT_ACCESS_DEV
+JWT_REFRESH_SECRET=$JWT_REFRESH_DEV
 EOF
 }
 

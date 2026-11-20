@@ -1,11 +1,18 @@
+import { randomBytes } from 'node:crypto';
 import { PrismaClient, Role } from '@prisma/client';
 import * as argon2 from 'argon2';
 
 const prisma = new PrismaClient();
 
 async function main(): Promise<void> {
-  const adminEmail = process.env.SEED_ADMIN_EMAIL ?? 'admin@axon.unismuh.local';
-  const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? 'Admin#12345';
+  const adminEmail = process.env.SEED_ADMIN_EMAIL ?? 'admin@axon.local';
+  const providedPassword = process.env.SEED_ADMIN_PASSWORD;
+  if (providedPassword !== undefined && providedPassword.length < 12) {
+    throw new Error('SEED_ADMIN_PASSWORD must be at least 12 characters long');
+  }
+  // No hardcoded default: generate a one-time random password when unset.
+  const adminPassword =
+    providedPassword ?? randomBytes(18).toString('base64url');
 
   const passwordHash = await argon2.hash(adminPassword, {
     type: argon2.argon2id,
@@ -24,7 +31,9 @@ async function main(): Promise<void> {
   });
 
   console.log(`Seeded super-admin: ${admin.email}`);
-  console.log('Default password (change immediately):', adminPassword);
+  if (providedPassword === undefined) {
+    console.log('Generated one-time password (shown once, change it):', adminPassword);
+  }
 }
 
 main()

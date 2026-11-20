@@ -94,6 +94,15 @@ const toBool = (value: string | undefined, fallback = false): boolean => {
   return value.toLowerCase() === 'true' || value === '1';
 };
 
+// Secrets have no safe default: the app must fail to start without them.
+const requireEnv = (name: string): string => {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${name}`);
+  }
+  return value;
+};
+
 const toList = (value: string | undefined): string[] =>
   (value ?? '')
     .split(',')
@@ -110,8 +119,8 @@ export default (): Configuration => ({
     corsOrigins: toList(process.env.CORS_ORIGINS) ?? ['http://localhost:3000'],
   },
   jwt: {
-    accessSecret: process.env.JWT_ACCESS_SECRET ?? 'change-me-access-secret',
-    refreshSecret: process.env.JWT_REFRESH_SECRET ?? 'change-me-refresh-secret',
+    accessSecret: requireEnv('JWT_ACCESS_SECRET'),
+    refreshSecret: requireEnv('JWT_REFRESH_SECRET'),
     accessTtl: process.env.JWT_ACCESS_TTL ?? '15m',
     refreshTtl: process.env.JWT_REFRESH_TTL ?? '7d',
   },

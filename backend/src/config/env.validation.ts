@@ -4,9 +4,15 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Matches,
   MinLength,
   validateSync,
 } from 'class-validator';
+
+// Reject copy-pasted example values such as "change-me".
+const PLACEHOLDER_GUARD = /^(?!.*change-?me).*$/i;
+const PLACEHOLDER_MESSAGE =
+  '$property must not be a placeholder value (e.g. "change-me"); generate one with: openssl rand -hex 32';
 
 enum NodeEnv {
   Development = 'development',
@@ -38,12 +44,14 @@ class EnvironmentVariables {
   @MinLength(16, {
     message: 'JWT_ACCESS_SECRET must be at least 16 characters long',
   })
+  @Matches(PLACEHOLDER_GUARD, { message: PLACEHOLDER_MESSAGE })
   JWT_ACCESS_SECRET!: string;
 
   @IsString()
   @MinLength(16, {
     message: 'JWT_REFRESH_SECRET must be at least 16 characters long',
   })
+  @Matches(PLACEHOLDER_GUARD, { message: PLACEHOLDER_MESSAGE })
   JWT_REFRESH_SECRET!: string;
 
   @IsString()

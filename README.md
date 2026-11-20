@@ -286,8 +286,8 @@ COMFYUI_FLUX_LORA=            # opsional, mis. Flux2TurboComfyv2.safetensors (ce
 JOB_CONCURRENCY=2
 
 # ── Auth (JWT) ───────────────────────
-JWT_ACCESS_SECRET=change-me   # openssl rand -hex 32
-JWT_REFRESH_SECRET=change-me
+JWT_ACCESS_SECRET=<isi-hasil: openssl rand -hex 32>
+JWT_REFRESH_SECRET=<isi-hasil: openssl rand -hex 32>
 JWT_ACCESS_TTL=15m
 JWT_REFRESH_TTL=7d
 ```
